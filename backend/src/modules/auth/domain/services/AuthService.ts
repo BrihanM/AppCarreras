@@ -4,6 +4,7 @@ import { Account } from '../entities/Account';
 import { User } from '../entities/User';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { getIo } from '../../../../socket';
 
 class AuthService {
   private accountRepo: IAccountRepository;
@@ -32,6 +33,7 @@ class AuthService {
     const hashed = await bcrypt.hash(attrs.password, 10);
     const id = attrs.id || uuidv4();
     const account = await this.accountRepo.create({ ...attrs, id, password_hash: hashed } as any);
+    try { const io = getIo(); if (io) io.emit('account:created', account); } catch (e) {}
     return account;
   }
 
@@ -43,11 +45,16 @@ class AuthService {
     if ((attrs as any).password) {
       (attrs as any).password_hash = await bcrypt.hash((attrs as any).password, 10);
     }
-    return this.accountRepo.update(id, attrs as any);
+    const updated = await this.accountRepo.update(id, attrs as any);
+    try { const io = getIo(); if (io) io.emit('account:updated', updated); } catch (e) {}
+    return updated;
   }
 
   async deleteAccount(id: string): Promise<void> {
-    return this.accountRepo.delete(id);
+    const acc = await this.accountRepo.findById(id);
+    await this.accountRepo.delete(id);
+    try { const io = getIo(); if (io && acc) io.emit('account:deleted', acc); } catch (e) {}
+    return;
   }
 
   // User operations
@@ -55,6 +62,7 @@ class AuthService {
     if (!this.userRepo) throw new Error('User repository not configured');
     const id = attrs.id || uuidv4();
     const user = await this.userRepo.create({ ...attrs, id } as any);
+    try { const io = getIo(); if (io) io.emit('user:created', user); } catch (e) {}
     return user;
   }
 
@@ -65,12 +73,17 @@ class AuthService {
 
   async updateUser(id: string, attrs: Partial<User>): Promise<User> {
     if (!this.userRepo) throw new Error('User repository not configured');
-    return this.userRepo.update(id, attrs as any);
+    const updated = await this.userRepo.update(id, attrs as any);
+    try { const io = getIo(); if (io) io.emit('user:updated', updated); } catch (e) {}
+    return updated;
   }
 
   async deleteUser(id: string): Promise<void> {
     if (!this.userRepo) throw new Error('User repository not configured');
-    return this.userRepo.delete(id);
+    const user = await this.userRepo.findById(id);
+    await this.userRepo.delete(id);
+    try { const io = getIo(); if (io && user) io.emit('user:deleted', user); } catch (e) {}
+    return;
   }
 
   async authenticate(identifier: string, password: string): Promise<Account> {
