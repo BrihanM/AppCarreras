@@ -23,7 +23,8 @@ const login = async (req: Request, res: Response) => {
   try {
     const parsed = loginSchema.parse(req.body);
     const account = await service.authenticate(parsed.identifier, parsed.password);
-    const secret = process.env.JWT_SECRET || 'changeme';
+      const secret = process.env.JWT_SECRET || 'changeme';
+      console.debug('authController: JWT_SECRET length', String(secret).length);
     const accessExpiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
     const accessToken = jwt.sign({ sub: account.id, username: account.username }, secret as any, { expiresIn: accessExpiresIn } as any);
     // create refresh token and set cookie
@@ -39,6 +40,7 @@ const login = async (req: Request, res: Response) => {
       maxAge,
     });
     res.json({ accessToken, expiresAt });
+    console.log('TOKEN', accessToken);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

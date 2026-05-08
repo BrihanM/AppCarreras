@@ -14,7 +14,19 @@ const secret = process.env.JWT_SECRET || 'changeme';
  */
 export function extractTokenFromRequest(req: Request): string | null {
   const auth = req.headers.authorization as string | undefined;
-  if (auth && auth.startsWith('Bearer ')) return auth.slice(7);
+  if (auth) {
+    const parts = auth.split(' ').filter(Boolean);
+    if (parts.length === 2) {
+      let t = parts[1].trim();
+      // strip surrounding single or double quotes if present
+      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+        t = t.slice(1, -1);
+      }
+      // strip possible newlines or extra whitespace
+      t = t.replace(/\s+/g, '');
+      return t;
+    }
+  }
   const cookies = (req as any).cookies || {};
   // Prefer access token cookie if present (accessToken), fall back to legacy `token` cookie
   if (cookies.accessToken) return cookies.accessToken;
@@ -48,6 +60,15 @@ export default function cookieAuth(optional = true) {
       (req as any).user = { id: payload.sub, username: payload.username };
       return next();
     } catch (err: any) {
+      // debug log for token verification failure (safe to show during development)
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('cookieAuth: token verification failed:', err && err.message);
+        try {
+          console.debug('cookieAuth: JWT_SECRET length', String(secret).length);
+        } catch (e) {
+          console.debug('cookieAuth: JWT_SECRET length unknown');
+        }
+      }
       if (optional) return next();
       return res.status(401).json({ error: 'Invalid token' });
     }

@@ -1,9 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import parseCookies from './middleware/parseCookies';
 import cookieAuth from './middleware/cookieAuth';
-import dotenv from 'dotenv';
 import { Server } from 'socket.io';
 import { setIo } from './socket';
 import { connectDB } from './config/db';
@@ -14,7 +15,6 @@ import challengesRoutes from './modules/challenges/application/routes';
 import notificationsRoutes from './modules/notifications/application/routes';
 import categoriesRoutes from './modules/categories/application/routes';
 
-dotenv.config();
 
 /**
  * @fileoverview Punto de entrada del backend AppCarreras.
@@ -53,6 +53,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(parseCookies);
 // attach optional auth from cookie or Authorization header
 app.use(cookieAuth(true));
+
+// Enforce authentication for all /api routes except the auth module (login/refresh/logout)
+app.use('/api', (req, res, next) => {
+  // allow unauthenticated access to auth endpoints
+  if (req.path && req.path.startsWith('/auth')) return next();
+  // allow if cookieAuth populated req.user
+  if ((req as any).user) return next();
+  return res.status(401).json({ error: 'Unauthorized' });
+});
 
 // Routes
 /**
