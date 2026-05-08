@@ -10,14 +10,14 @@
       "name": "Create Challenge",
       "request": {
         "method": "POST",
-        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" } ],
         "body": { "mode": "raw", "raw": "{\n  \"challenger_id\": \"{{userId}}\",\n  \"challenged_id\": \"{{otherUserId}}\",\n  \"career_type\": \"Sprint\",\n  \"challenger_vehicle_id\": \"{{vehicleId}}\",\n  \"challenged_vehicle_id\": \"{{otherVehicleId}}\",\n  \"agreed_location\": \"Track A\",\n  \"agreed_date\": \"2026-06-01\",\n  \"notes\": \"Friendly race\"\n}" },
         "url": "{{baseUrl}}/api/challenges"
       },
       "event": [ { "listen": "test", "script": { "exec": [ "var json = pm.response.json();", "if (json && json.id) { pm.environment.set('challengeId', json.id); }", "pm.test('Status is 201', function () { pm.response.to.have.status(201); });" ] } } ]
     },
-    { "name": "Accept Challenge", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/challenges/{{challengeId}}/accept" }, "response": [] },
-    { "name": "Reject Challenge", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/challenges/{{challengeId}}/reject" }, "response": [] },
-    { "name": "Complete Challenge", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "raw", "raw": "{\n  \"winner_id\": \"{{userId}}\"\n}" }, "url": "{{baseUrl}}/api/challenges/{{challengeId}}/complete" }, "response": [] }
+    { "name": "Accept Challenge", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/challenges/{{challengeId}}/accept" }, "response": [] },
+    { "name": "Reject Challenge", "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/challenges/{{challengeId}}/reject" }, "response": [] },
+    { "name": "Complete Challenge", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"winner_id\": \"{{userId}}\"\n}" }, "url": "{{baseUrl}}/api/challenges/{{challengeId}}/complete" }, "response": [] }
   ]
 }

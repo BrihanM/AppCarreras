@@ -3,7 +3,7 @@ url: "{{baseUrl}}/api/challenges/{{challengeId}}/complete"
 method: PUT
 headers:
   Content-Type: application/json
-  Authorization: Bearer {{token}}
+  Authorization: Bearer {{accessToken}}
 body:
   type: text
   content: |-

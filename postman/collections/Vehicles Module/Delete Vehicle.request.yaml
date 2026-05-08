@@ -2,5 +2,5 @@ $kind: http-request
 url: "{{baseUrl}}/api/vehicles/{{vehicleId}}"
 method: DELETE
 headers:
-  Authorization: Bearer {{token}}
+  Authorization: Bearer {{accessToken}}
 order: 4000

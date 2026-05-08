@@ -59,8 +59,8 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "// Guardar access token desde el body",
-              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+              "// Guardar access token desde el body (y mantener 'token' por compatibilidad)",
+              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); pm.environment.set('token', json.accessToken); }",
               "// Intentar leer cookie refreshToken y guardarla en variable de entorno",
               "var rt = pm.cookies.get('refreshToken');",
               "if (rt) { pm.environment.set('refreshToken', rt); }",
@@ -81,7 +81,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
@@ -111,7 +111,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": "{{baseUrl}}/api/users"
@@ -125,7 +125,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": "{{baseUrl}}/api/users/{{userId}}"
@@ -143,7 +143,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "body": {
@@ -161,7 +161,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{token}}"
+            "value": "Bearer {{accessToken}}"
           }
         ],
         "url": "{{baseUrl}}/api/users/{{userId}}"
@@ -196,7 +196,7 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); pm.environment.set('token', json.accessToken); }",
               "var rt = pm.cookies.get('refreshToken');",
               "if (rt) { pm.environment.set('refreshToken', rt); }",
               "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
@@ -219,6 +219,7 @@
           "script": {
             "exec": [
               "pm.environment.unset('accessToken');",
+              "pm.environment.unset('token');",
               "pm.environment.unset('refreshToken');",
               "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
             ]

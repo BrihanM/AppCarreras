@@ -3,7 +3,7 @@ url: "{{baseUrl}}/api/users/{{userId}}"
 method: PUT
 headers:
   Content-Type: application/json
-  Authorization: Bearer {{token}}
+  Authorization: Bearer {{accessToken}}
 body:
   type: text
   content: |-

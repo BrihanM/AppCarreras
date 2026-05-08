@@ -2,5 +2,5 @@ $kind: http-request
 url: "{{baseUrl}}/api/users/{{userId}}"
 method: GET
 headers:
-  Authorization: Bearer {{token}}
+  Authorization: Bearer {{accessToken}}
 order: 5000

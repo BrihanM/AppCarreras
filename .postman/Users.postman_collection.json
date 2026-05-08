@@ -12,7 +12,7 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
         ],
         "body": {
           "mode": "raw",
@@ -35,19 +35,19 @@
     },
     {
       "name": "List Users",
-      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users" },
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/users" },
       "response": []
     },
     {
       "name": "Get User",
-      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/{{userId}}" },
+      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/users/{{userId}}" },
       "response": []
     },
     {
       "name": "Update User",
       "request": {
         "method": "PUT",
-        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" } ],
         "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test Pilot Updated\"\n}" },
         "url": "{{baseUrl}}/api/users/{{userId}}"
       },
@@ -55,7 +55,7 @@
     },
     {
       "name": "Delete User",
-      "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/{{userId}}" },
+      "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/users/{{userId}}" },
       "response": []
     }
   ]

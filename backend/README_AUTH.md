@@ -1,80 +1,83 @@
 # Autenticación — Backend AppCarreras
 
 Resumen breve
-- Este backend usa JWT para autenticación.
-- El JWT se firma con `process.env.JWT_SECRET` y puede transmitirse de dos formas:
-  - Cookie HttpOnly llamada `token` (recomendada para clientes web).
-  - Header `Authorization: Bearer <token>` (útil para APIs y herramientas como Postman).
+- El backend usa un esquema seguro de Access + Refresh tokens basado en JWT.
+- Access token: token corto (15–30 minutos) usado para llamadas API (en header `Authorization` o cookie `accessToken`).
+- Refresh token: token de larga duración (7 días) almacenado únicamente como cookie HttpOnly `refreshToken` y también persistido en la BD como hash para permitir rotación y revocación.
 
-Flujo de login
+Flujo principal
 1. El cliente envía credenciales a `POST /api/auth/login`.
-2. El servidor valida credenciales y genera un JWT con `sub` = userId y otros claims (por ejemplo `username`).
-3. El endpoint de `login` envía el token de dos maneras:
-   - Establece la cookie HttpOnly `token` en la respuesta (Set-Cookie) con opciones de seguridad.
-   - Opcionalmente devuelve `{ token }` en el body (según configuración).
+2. Si las credenciales son válidas el servidor:
+   - Genera un `accessToken` (corto) y lo devuelve en el body: `{ accessToken }`.
+   - Genera un `refreshToken` (secreto) y lo persiste en la BD como hash; además lo establece en la cookie HttpOnly `refreshToken` con `Max-Age=7d`.
+3. Para renovar sesión el cliente llama `POST /api/auth/refresh` (la cookie `refreshToken` se envía automáticamente si se usan cookies). El servidor valida el hash, rota el refresh token (crea uno nuevo y marca/revoca el anterior) y devuelve un nuevo `accessToken` además de reemplazar la cookie `refreshToken`.
+4. Logout: `POST /api/auth/logout` revoca el refresh token en la BD y borra la cookie `refreshToken` en el cliente.
 
-Cookies y seguridad
-- Cookie: `token` (HttpOnly)
-- Recomendaciones de configuración en producción:
-  - `HttpOnly: true` (impide acceso desde JavaScript)
-  - `Secure: true` (solo HTTPS)
-  - `SameSite: 'lax'` o `'strict'` según necesidades
-  - `domain`/`path` específicos según despliegue
+Puntos importantes de seguridad
+- Los refresh tokens se almacenan hasheados en la BD (ver: migration `src/modules/auth/infrastructure/migrations/000_create_refresh_tokens.sql` y `RefreshTokenRepositoryPg`) para minimizar riesgo en caso de leak.
+- La rotación de refresh tokens reduce la ventana de ataque: cada uso consume/reescribe el token y el antiguo se marca como reemplazado.
+- En caso de detección de reuse (uso de un refresh token ya revocado) el sistema revoca todos los tokens del usuario para mitigar compromiso.
 
-Middlewares relevantes
-- `src/middleware/parseCookies.ts` — parsea la cabecera `Cookie` y expone `req.cookies`.
-  - Uso: registrar como middleware global antes de `cookieAuth`.
-  - Ruta: [src/middleware/parseCookies.ts](src/middleware/parseCookies.ts)
+Endpoints relevantes
+- `POST /api/auth/login` — recibe credenciales, retorna `{ accessToken }` y establece cookie `refreshToken` (HttpOnly, Secure en producción).
+- `POST /api/auth/refresh` — rota refresh token y retorna nuevo `{ accessToken }`; reemplaza cookie `refreshToken`.
+- `POST /api/auth/logout` — revoca refresh token y borra la cookie `refreshToken`.
 
-- `src/middleware/cookieAuth.ts` — extracción y verificación del token desde:
-  - Header `Authorization: Bearer <token>`
-  - Cookie `token` (populada por `parseCookies`)
-  - Header personalizado `x-cookie` (fallback para clientes que envíen la cadena cookie)
-  - Proporciona `cookieAuth(optional = true)` que puede permitir requests no autenticadas si `optional`.
-  - Ruta: [src/middleware/cookieAuth.ts](src/middleware/cookieAuth.ts)
+Cookies y headers
+- Cookie de refresh: `refreshToken` (HttpOnly, Max-Age=7d).
+- Cookie opcional de access: `accessToken` (si se usa estrategia de cookies); por defecto el `accessToken` se devuelve en el body y el cliente debe enviarlo en `Authorization: Bearer <accessToken>`.
+- El middleware `cookieAuth` extrae el token de (prioridad):
+  1. Header `Authorization: Bearer <token>`
+  2. Cookie `accessToken` (soporte para estrategia por cookies si el cliente la usa)
+  3. Cookie legacy `token` (compatibilidad)
+  4. Header `x-cookie` (fallback que contiene la cadena cookie)
 
-- `src/modules/auth/application/middleware/authMiddleware.ts` — `requireAuth` que exige header `Authorization` (Bearer) y falla con 401 en caso de ausencia o token inválido.
-  - Ruta: [src/modules/auth/application/middleware/authMiddleware.ts](src/modules/auth/application/middleware/authMiddleware.ts)
+Middlewares y archivos clave
+- `src/middleware/parseCookies.ts` — parsea `Cookie` y expone `req.cookies`.
+- `src/middleware/cookieAuth.ts` — extrae token desde header/cookie/x-cookie y popula `req.user` si válido.
+- `src/modules/auth/application/middleware/authMiddleware.ts` — `requireAuth` para endpoints que obligan autenticación.
+- `src/modules/auth/application/controllers/authController.ts` — implementa `login`, `refresh`, `logout`.
+- `src/modules/auth/infrastructure/adapters/pg/RefreshTokenRepositoryPg.ts` — persistencia de refresh tokens (usa hash).
+- Migración de refresh tokens: `src/modules/auth/infrastructure/migrations/000_create_refresh_tokens.sql`.
 
 Uso desde clientes
-- Navegador web (recomendado):
-  1. Hacer `POST /api/auth/login` — el navegador recibirá la cookie `Set-Cookie` y la almacenará si la respuesta y el origen son permitidos por CORS.
-  2. Subsecuentes peticiones fetch/fetch API incluirán la cookie si se usan `credentials: 'include'`.
+- Navegador (recomendado):
+  - Hacer `POST /api/auth/login` con `credentials: 'include'` si confías en cookies.
+  - Guardar `accessToken` en memoria (no en localStorage) y usar `Authorization: Bearer <accessToken>` en llamadas API; cuando caduque, llamar a `/api/auth/refresh` para obtener nuevo acceso.
 
-- Postman / herramientas: Capture el header `Set-Cookie` del login y guárdalo en la variable de entorno `tokenCookie` o extrae manualmente el JWT y colócalo en `{{token}}` para `Authorization: Bearer {{token}}`.
-
-Ejemplo de uso en fetch (cliente web):
+Ejemplo (fetch):
 
 ```js
-// login
-await fetch('http://localhost:3000/api/auth/login', {
+// login -> obtiene accessToken en body y cookie refreshToken se establece automáticamente
+const res = await fetch('http://localhost:3000/api/auth/login', {
   method: 'POST',
   credentials: 'include',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ username, password })
 });
+const { accessToken } = await res.json();
 
-// luego peticiones autenticadas (cookie enviada automáticamente)
+// usar accessToken en subsequent requests
 await fetch('http://localhost:3000/api/users/me', {
+  headers: { Authorization: `Bearer ${accessToken}` },
   credentials: 'include'
 });
+
+// refresh
+await fetch('http://localhost:3000/api/auth/refresh', { method: 'POST', credentials: 'include' });
 ```
 
-Ejemplo con Authorization header (Postman o cliente JS que prefiera token explícito):
+- Postman / herramientas:
+  - La colección `Auth` incluye tests que capturan `accessToken` y manejan la cookie `refreshToken` (ver `.postman/Auth.postman_collection.json`).
+  - Para entornos sin cookies capture el `accessToken` del body del `login` y úselo en `Authorization: Bearer {{accessToken}}`.
 
-```
-Authorization: Bearer <token>
-```
+Tests y documentación interna
+- Los tests unitarios del módulo de auth están en `src/modules/auth/__tests__/AuthService.spec.ts` y están documentados con JSDoc describiendo Arrange/Act/Assert en cada caso.
+- Se añadieron tests unitarios y documentación JSDoc para los demás módulos: `users`, `vehicles`, `challenges`, `notifications`, `categories`.
 
-Consideraciones adicionales
-- Las APIs públicas/externas pueden preferir `Authorization` header.
-- Las cookies HttpOnly protegen contra XSS, pero hay que considerar CSRF: usar SameSite, tokens CSRF o diseño de endpoints para mitigar.
-- El middleware `cookieAuth` se diseñó para ser tolerante (`optional`) en rutas públicas; para endpoints que requieren autenticación use `requireAuth` o `cookieAuth(false)`.
-
-Archivo(s) clave en el proyecto
-- [src/middleware/parseCookies.ts](src/middleware/parseCookies.ts)
-- [src/middleware/cookieAuth.ts](src/middleware/cookieAuth.ts)
-- [src/modules/auth/application/controllers/authController.ts](src/modules/auth/application/controllers/authController.ts)
+Recomendaciones de despliegue
+- En producción use HTTPS (`Secure` cookies), `SameSite` apropiado y configure el dominio/path de la cookie.
+- Considere almacenar un blacklist/denylist en Redis si necesita invalidación inmediata a gran escala.
 
 Comandos útiles
 
@@ -84,6 +87,9 @@ npx tsc --noEmit
 
 # Ejecutar migraciones (configurar DB primero)
 npm run migrate
+
+# Ejecutar tests
+npm test
 
 # Iniciar servidor en desarrollo
 npm run dev
