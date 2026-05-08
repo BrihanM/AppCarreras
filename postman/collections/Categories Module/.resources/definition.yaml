@@ -1,0 +1,5 @@
+$kind: collection
+name: Categories Module
+description: Collection to test the Competition Categories microservice.
+variables:
+  baseUrl: ""

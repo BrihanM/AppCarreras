@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/challenges/{{challengeId}}/accept"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+order: 2000

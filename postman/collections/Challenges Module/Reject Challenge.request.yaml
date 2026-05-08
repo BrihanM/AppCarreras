@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/challenges/{{challengeId}}/reject"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+order: 3000

@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{baseUrl}}/api/challenges"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "challenger_id": "{{userId}}",
+      "challenged_id": "{{otherUserId}}",
+      "career_type": "Sprint",
+      "challenger_vehicle_id": "{{vehicleId}}",
+      "challenged_vehicle_id": "{{otherVehicleId}}",
+      "agreed_location": "Track A",
+      "agreed_date": "2026-06-01",
+      "notes": "Friendly race"
+    }
+scripts:
+  - type: afterResponse
+    code: >-
+      var json = pm.response.json();
+
+      if (json && json.id) { pm.environment.set('challengeId', json.id); }
+
+      pm.test('Status is 201', function () { pm.response.to.have.status(201);
+      });
+    language: text/javascript
+order: 1000

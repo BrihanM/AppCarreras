@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "Notifications Module",
+    "_postman_id": "notifications-module-collection",
+    "description": "Collection to test the Notifications microservice.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Notifications",
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/notifications?user_id={{userId}}" },
+      "response": []
+    },
+    {
+      "name": "Create Notification",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"type\": \"info\",\n  \"message\": \"Test notification\",\n  \"reference_id\": null\n}" },
+        "url": "{{baseUrl}}/api/notifications"
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "var json = pm.response.json();", "if (json && json.id) { pm.environment.set('notificationId', json.id); }", "pm.test('Status is 201', function () { pm.response.to.have.status(201); });" ] } } ]
+    },
+    {
+      "name": "Mark Read",
+      "request": { "method": "PATCH", "header": [], "url": "{{baseUrl}}/api/notifications/{{notificationId}}/read" },
+      "response": []
+    }
+  ]
+}

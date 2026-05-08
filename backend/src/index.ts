@@ -7,6 +7,9 @@ import { connectDB } from './config/db';
 import authRoutes from './modules/auth/application/routes';
 import usersRoutes from './modules/users/application/routes';
 import vehiclesRoutes from './modules/vehicles/application/routes';
+import challengesRoutes from './modules/challenges/application/routes';
+import notificationsRoutes from './modules/notifications/application/routes';
+import categoriesRoutes from './modules/categories/application/routes';
 
 dotenv.config();
 
@@ -34,6 +37,9 @@ app.get('/health', (_req, res) => {
 app.use('/api', authRoutes);
 app.use('/api', usersRoutes);
 app.use('/api', vehiclesRoutes);
+app.use('/api', challengesRoutes);
+app.use('/api', notificationsRoutes);
+app.use('/api', categoriesRoutes);
 
 // Socket.io
 io.on('connection', (socket) => {

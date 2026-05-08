@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/challenges/{{challengeId}}/complete"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "winner_id": "{{userId}}"
+    }
+order: 4000

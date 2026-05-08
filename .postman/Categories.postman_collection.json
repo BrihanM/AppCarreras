@@ -1,0 +1,23 @@
+{
+  "info": {
+    "name": "Categories Module",
+    "_postman_id": "categories-module-collection",
+    "description": "Collection to test the Competition Categories microservice.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Category",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Pro Class\",\n  \"description\": \"Top tier\"\n}" },
+        "url": "{{baseUrl}}/api/categories"
+      },
+      "event": [ { "listen": "test", "script": { "exec": [ "var json = pm.response.json();", "if (json && json.id) { pm.environment.set('categoryId', json.id); }", "pm.test('Status is 201', function () { pm.response.to.have.status(201); });" ] } } ]
+    },
+    { "name": "List Categories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/categories" }, "response": [] },
+    { "name": "Update Category", "request": { "method": "PUT", "header": [ { "key": "Content-Type", "value": "application/json" } ], "body": { "mode": "raw", "raw": "{ \"name\": \"Pro Class Updated\" }" }, "url": "{{baseUrl}}/api/categories/{{categoryId}}" }, "response": [] },
+    { "name": "Delete Category", "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/categories/{{categoryId}}" }, "response": [] }
+  ]
+}

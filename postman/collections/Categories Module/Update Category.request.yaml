@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{baseUrl}}/api/categories/{{categoryId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: '{ "name": "Pro Class Updated" }'
+order: 3000

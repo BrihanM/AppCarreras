@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/categories"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Pro Class",
+      "description": "Top tier"
+    }
+scripts:
+  - type: afterResponse
+    code: >-
+      var json = pm.response.json();
+
+      if (json && json.id) { pm.environment.set('categoryId', json.id); }
+
+      pm.test('Status is 201', function () { pm.response.to.have.status(201);
+      });
+    language: text/javascript
+order: 1000
