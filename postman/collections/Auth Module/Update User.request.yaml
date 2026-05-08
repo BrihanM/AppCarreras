@@ -1,4 +1,5 @@
 $kind: http-request
+name: Update User
 url: "{{baseUrl}}/api/users/{{userId}}"
 method: PUT
 headers:
@@ -8,6 +9,6 @@ body:
   type: text
   content: |-
     {
-      "name": "Test Pilot Updated"
+      "name": "Brihan M M"
     }
 order: 6000
