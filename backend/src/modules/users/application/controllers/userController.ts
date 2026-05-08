@@ -1,15 +1,15 @@
 import { Request, Response } from 'express';
 import UserRepositoryPg from '../../infrastructure/adapters/pg/UserRepositoryPg';
-import AccountRepositoryPg from '../../infrastructure/adapters/pg/AccountRepositoryPg';
-import AuthService from '../../domain/services/AuthService';
+import UserService from '../../domain/services/UserService';
+import { createUserSchema, updateUserSchema } from '../validators/userSchemas';
 
-const userRepo = new UserRepositoryPg();
-const accountRepo = new AccountRepositoryPg();
-const service = new AuthService(accountRepo, userRepo);
+const repo = new UserRepositoryPg();
+const service = new UserService(repo);
 
 const create = async (req: Request, res: Response) => {
   try {
-    const user = await service.createUser(req.body);
+    const parsed = createUserSchema.parse(req.body);
+    const user = await service.createUser(parsed as any);
     res.status(201).json(user);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -30,7 +30,8 @@ const getById = async (req: Request, res: Response) => {
 const update = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const updated = await service.updateUser(id, req.body);
+    const parsed = updateUserSchema.parse(req.body);
+    const updated = await service.updateUser(id, parsed as any);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -49,7 +50,7 @@ const remove = async (req: Request, res: Response) => {
 
 const list = async (_req: Request, res: Response) => {
   try {
-    const items = await userRepo.findAll();
+    const items = await service.listUsers();
     res.json(items);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

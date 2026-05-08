@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { Server } from 'socket.io';
 import { connectDB } from './config/db';
 import authRoutes from './modules/auth/application/routes';
+import usersRoutes from './modules/users/application/routes';
+import vehiclesRoutes from './modules/vehicles/application/routes';
 
 dotenv.config();
 
@@ -30,6 +32,8 @@ app.get('/health', (_req, res) => {
 
 // API routes
 app.use('/api', authRoutes);
+app.use('/api', usersRoutes);
+app.use('/api', vehiclesRoutes);
 
 // Socket.io
 io.on('connection', (socket) => {
