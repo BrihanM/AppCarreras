@@ -14,9 +14,22 @@ class AuthService {
     this.userRepo = userRepo;
   }
 
-  async createAccount(attrs: Partial<Account>): Promise<Account> {
-    if (!attrs.password_hash) throw new Error('Password is required');
-    const hashed = await bcrypt.hash(attrs.password_hash, 10);
+  async createAccount(attrs: Partial<Account> & { password?: string }): Promise<Account> {
+    const username = attrs.username;
+    const email = attrs.email;
+    if (!attrs.password) throw new Error('Password is required');
+
+    // uniqueness checks
+    if (username) {
+      const existing = await this.accountRepo.findByUsername(username);
+      if (existing) throw new Error('Username already exists');
+    }
+    if (email) {
+      const existingEmail = await this.accountRepo.findByEmail(email);
+      if (existingEmail) throw new Error('Email already exists');
+    }
+
+    const hashed = await bcrypt.hash(attrs.password, 10);
     const id = attrs.id || uuidv4();
     const account = await this.accountRepo.create({ ...attrs, id, password_hash: hashed } as any);
     return account;
@@ -27,8 +40,8 @@ class AuthService {
   }
 
   async updateAccount(id: string, attrs: Partial<Account>): Promise<Account> {
-    if (attrs.password_hash) {
-      attrs.password_hash = await bcrypt.hash(attrs.password_hash, 10);
+    if ((attrs as any).password) {
+      (attrs as any).password_hash = await bcrypt.hash((attrs as any).password, 10);
     }
     return this.accountRepo.update(id, attrs as any);
   }
@@ -58,6 +71,15 @@ class AuthService {
   async deleteUser(id: string): Promise<void> {
     if (!this.userRepo) throw new Error('User repository not configured');
     return this.userRepo.delete(id);
+  }
+
+  async authenticate(identifier: string, password: string): Promise<Account> {
+    const byUsername = await this.accountRepo.findByUsername(identifier);
+    const account = byUsername || await this.accountRepo.findByEmail(identifier);
+    if (!account) throw new Error('Invalid credentials');
+    const match = await bcrypt.compare(password, account.password_hash);
+    if (!match) throw new Error('Invalid credentials');
+    return account;
   }
 }
 

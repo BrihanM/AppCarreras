@@ -1,13 +1,15 @@
 import { Request, Response } from 'express';
 import AccountRepositoryPg from '../../infrastructure/adapters/pg/AccountRepositoryPg';
 import AuthService from '../../domain/services/AuthService';
+import { createAccountSchema } from '../validators/accountSchemas';
 
 const repo = new AccountRepositoryPg();
 const service = new AuthService(repo, null);
 
 const create = async (req: Request, res: Response) => {
   try {
-    const account = await service.createAccount(req.body);
+    const parsed = createAccountSchema.parse(req.body);
+    const account = await service.createAccount(parsed as any);
     res.status(201).json(account);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
