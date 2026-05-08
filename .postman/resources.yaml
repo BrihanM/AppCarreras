@@ -2,6 +2,10 @@
 workspace:
   id: 06e1d197-ca34-4aa3-ae34-2780ce571aca
 
+cloudResources:
+  collections:
+    ..\postman\collections\Auth Module: 44dec2db-9c95-45ed-9289-02aa455f9bf2
+
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:
 #localResources:

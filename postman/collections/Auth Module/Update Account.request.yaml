@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/accounts/{{accountId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "photo": "http://example.com/photo.png"
+    }
+order: 9000

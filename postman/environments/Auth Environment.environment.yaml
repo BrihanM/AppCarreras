@@ -1,0 +1,14 @@
+name: Auth Environment
+values:
+  - key: baseUrl
+    value: 'http://localhost:4000'
+    enabled: true
+  - key: token
+    value: ''
+    enabled: true
+  - key: accountId
+    value: ''
+    enabled: true
+  - key: userId
+    value: ''
+    enabled: true

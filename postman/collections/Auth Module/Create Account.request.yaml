@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/accounts"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "username": "testuser",
+      "email": "test@example.com",
+      "password": "Password123",
+      "photo": null
+    }
+scripts:
+  - type: afterResponse
+    code: >-
+      var json = pm.response.json();
+
+      if (json && json.id) { pm.environment.set('accountId', json.id); }
+
+      pm.test('Status is 201', function () { pm.response.to.have.status(201);
+      });
+    language: text/javascript
+order: 1000
