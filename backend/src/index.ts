@@ -3,6 +3,8 @@ import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Server } from 'socket.io';
+import { connectDB } from './config/db';
+import authRoutes from './modules/auth/application/routes';
 
 dotenv.config();
 
@@ -26,6 +28,9 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// API routes
+app.use('/api', authRoutes);
+
 // Socket.io
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
@@ -37,8 +42,14 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 4000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Connect to DB and start
+connectDB().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });
 
 export { io };
