@@ -6,6 +6,10 @@ import { createCategorySchema, updateCategorySchema } from '../validators/catego
 const repo = new CategoryRepositoryPg();
 const service = new CategoryService(repo);
 
+/**
+ * list
+ * Lista todas las categorías.
+ */
 const list = async (_req: Request, res: Response) => {
   try {
     const items = await service.listCategories();
@@ -15,6 +19,10 @@ const list = async (_req: Request, res: Response) => {
   }
 };
 
+/**
+ * create
+ * Crea una nueva categoría validando con `createCategorySchema`.
+ */
 const create = async (req: Request, res: Response) => {
   try {
     const parsed = createCategorySchema.parse(req.body);
@@ -25,6 +33,10 @@ const create = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * update
+ * Actualiza una categoría por id.
+ */
 const update = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -36,6 +48,10 @@ const update = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * remove
+ * Elimina una categoría por id.
+ */
 const remove = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);

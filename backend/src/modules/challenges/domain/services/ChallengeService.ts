@@ -6,6 +6,20 @@ import NotificationRepositoryPg from '../../../notifications/infrastructure/adap
 import { getIo } from '../../../../socket';
 
 
+/**
+ * @fileoverview
+ * Servicio de dominio para `Challenge` (retos). Contiene la lógica de negocio
+ * relacionada con crear, aceptar, rechazar y completar retos entre usuarios.
+ *
+ * Reglas principales aplicadas aquí:
+ * - Un usuario no puede retarse a sí mismo.
+ * - No debe existir más de un reto activo entre los mismos dos usuarios.
+ * - Solo usuarios del mismo `rank` pueden retarse.
+ * - Al completarse un reto se actualizan estadísticas de usuarios y se crean
+ *   notificaciones.
+ */
+
+
 class ChallengeService {
   private repo: IChallengeRepository;
 
@@ -14,6 +28,18 @@ class ChallengeService {
   }
 
   async createChallenge(attrs: Partial<Challenge>): Promise<Challenge> {
+    /**
+     * createChallenge
+     * Crea un nuevo reto entre dos usuarios.
+     * - Verifica que existan `challenger_id` y `challenged_id` y que sean diferentes.
+     * - Genera un `id` si no se proporciona y marca el estado inicial como `pending`.
+     * - Enforce: no puede existir un reto activo entre ambos usuarios.
+     * - Enforce: solo usuarios con el mismo `rank` pueden retarse.
+     * - Crea una notificación para el usuario retado y emite evento WebSocket.
+     *
+     * @param {Partial<Challenge>} attrs - Atributos parciales del reto.
+     * @returns {Promise<Challenge>} El reto creado.
+     */
     if (!attrs.challenger_id || !attrs.challenged_id) {
       throw new Error('Both challenger and challenged user ids are required');
     }
@@ -51,6 +77,16 @@ class ChallengeService {
   }
 
   async acceptChallenge(id: string): Promise<Challenge> {
+    /**
+     * acceptChallenge
+     * Acepta un reto pendiente.
+     * - Verifica que el reto exista y esté en estado `pending`.
+     * - Actualiza el estado a `accepted`.
+     * - Crea una notificación para el retador y emite un evento websocket.
+     *
+     * @param {string} id - Identificador del reto a aceptar.
+     * @returns {Promise<Challenge>} El reto actualizado.
+     */
     const challenge = await this.repo.findById(id);
     if (!challenge) throw new Error('Challenge not found');
     if (challenge.state !== 'pending') throw new Error('Only pending challenges can be accepted');
@@ -65,6 +101,15 @@ class ChallengeService {
   }
 
   async rejectChallenge(id: string): Promise<Challenge> {
+    /**
+     * rejectChallenge
+     * Rechaza un reto pendiente.
+     * - Verifica existencia y estado `pending`.
+     * - Cambia estado a `rejected` y notifica al retador.
+     *
+     * @param {string} id - Identificador del reto a rechazar.
+     * @returns {Promise<Challenge>} El reto actualizado.
+     */
     const challenge = await this.repo.findById(id);
     if (!challenge) throw new Error('Challenge not found');
     if (challenge.state !== 'pending') throw new Error('Only pending challenges can be rejected');
@@ -76,6 +121,19 @@ class ChallengeService {
   }
 
   async completeChallenge(id: string, winner_id: string): Promise<Challenge> {
+    /**
+     * completeChallenge
+     * Marca un reto como completado y registra el ganador.
+     * - Verifica que el reto exista y esté en estado `accepted`.
+     * - Valida que `winner_id` sea uno de los participantes.
+     * - Actualiza estado a `completed` y asigna `winner_id`.
+     * - Actualiza estadísticas de `victories`, `defeats` y `consecutive_challenges`.
+     * - Crea notificaciones para ganador y perdedor y emite eventos websocket.
+     *
+     * @param {string} id - Identificador del reto.
+     * @param {string} winner_id - Identificador del usuario ganador.
+     * @returns {Promise<Challenge>} El reto finalizado.
+     */
     const challenge = await this.repo.findById(id);
     if (!challenge) throw new Error('Challenge not found');
     if (challenge.state !== 'accepted') throw new Error('Only accepted challenges can be completed');
@@ -109,10 +167,22 @@ class ChallengeService {
   }
 
   async getChallenge(id: string): Promise<Challenge | null> {
+    /**
+     * getChallenge
+     * Recupera un reto por su identificador.
+     * @param {string} id - Identificador del reto.
+     * @returns {Promise<Challenge|null>} El reto o `null` si no existe.
+     */
     return this.repo.findById(id);
   }
 
   async listByUser(userId: string): Promise<Challenge[]> {
+    /**
+     * listByUser
+     * Lista los retos relacionados con un usuario (tanto como retador como retado).
+     * @param {string} userId - Identificador del usuario.
+     * @returns {Promise<Challenge[]>} Array de retos.
+     */
     return this.repo.listByUser(userId);
   }
 }

@@ -6,6 +6,12 @@ import { createVehicleSchema } from '../validators/vehicleSchemas';
 const repo = new VehicleRepositoryPg();
 const service = new VehicleService(repo);
 
+/**
+ * createForUser
+ * Crea un `Vehicle` para un usuario específico.
+ * - Valida con `createVehicleSchema`.
+ * - Aplica reglas desde `VehicleService` (máx 3, único activo).
+ */
 const createForUser = async (req: Request, res: Response) => {
   try {
     const userId = String(req.params.id);
@@ -17,6 +23,10 @@ const createForUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * listForUser
+ * Lista los vehículos de un usuario.
+ */
 const listForUser = async (req: Request, res: Response) => {
   try {
     const userId = String(req.params.id);
@@ -27,6 +37,10 @@ const listForUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * activate
+ * Activa un vehículo (desactiva los demás del mismo usuario).
+ */
 const activate = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -37,6 +51,10 @@ const activate = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * remove
+ * Elimina un vehículo por id.
+ */
 const remove = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);

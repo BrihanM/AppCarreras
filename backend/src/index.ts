@@ -16,6 +16,16 @@ import categoriesRoutes from './modules/categories/application/routes';
 
 dotenv.config();
 
+/**
+ * @fileoverview Punto de entrada del backend AppCarreras.
+ *
+ * - Configura Express y middlewares principales (CORS, body parsers, cookies).
+ * - Registra rutas de los módulos (auth, users, vehicles, challenges, notifications, categories).
+ * - Inicializa Socket.io y expone el objeto `io` para que los servicios emitan eventos.
+ *
+ * Comentarios en español (JSDoc) documentan responsabilidades y puntos de extensión.
+ */
+
 const app = express();
 const server = http.createServer(app);
 
@@ -29,6 +39,13 @@ const io = new Server(server, {
 // register io globally for modules to use
 setIo(io);
 
+/**
+ * Middlewares principales
+ * - CORS con `credentials: true` para permitir cookies HttpOnly desde el cliente.
+ * - `express.json()` y `express.urlencoded()` para parsear bodies.
+ * - `parseCookies` popula `req.cookies` y `cookieAuth(true)` intenta autenticar
+ *   (si hay token) para dejar `req.user` disponible.
+ */
 // Middlewares
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
 app.use(express.json());
@@ -38,6 +55,11 @@ app.use(parseCookies);
 app.use(cookieAuth(true));
 
 // Routes
+/**
+ * Healthcheck
+ * @route GET /health
+ * @returns {{status: string}} Estado simple para monitorización.
+ */
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
@@ -51,7 +73,12 @@ app.use('/api', notificationsRoutes);
 app.use('/api', categoriesRoutes);
 
 // Socket.io
-// Socket.io authentication using cookie or auth header
+/**
+ * Autenticación para Socket.io
+ * - Intenta extraer JWT desde `Authorization` o desde la cookie `token`.
+ * - Si verifica correctamente, adjunta `socket.data.user = { id, username }`.
+ * - No bloquea la conexión si no hay token (modo opcional). Cambiar para forzar auth.
+ */
 io.use((socket, next) => {
   try {
     const cookieHeader = socket.handshake.headers.cookie as string | undefined;
@@ -75,6 +102,11 @@ io.use((socket, next) => {
   }
 });
 
+/**
+ * Manejo de conexión de sockets.
+ * - Si el socket quedó autenticado durante el `io.use`, se une a la sala `user:<id>`.
+ * - Aquí es un buen punto para registrar otros listeners específicos del socket.
+ */
 io.on('connection', (socket) => {
   const user = (socket as any).data?.user;
   console.log(`Client connected: ${socket.id}`, user ? 'user=' + JSON.stringify(user) : 'anonymous');

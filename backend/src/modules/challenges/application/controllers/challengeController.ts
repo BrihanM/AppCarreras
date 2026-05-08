@@ -6,6 +6,10 @@ import { createChallengeSchema, completeChallengeSchema } from '../validators/ch
 const repo = new ChallengeRepositoryPg();
 const service = new ChallengeService(repo);
 
+/**
+ * create
+ * Crea un `Challenge` validando con `createChallengeSchema`.
+ */
 const create = async (req: Request, res: Response) => {
   try {
     const parsed = createChallengeSchema.parse(req.body);
@@ -16,6 +20,10 @@ const create = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * accept
+ * Acepta un `Challenge` por id.
+ */
 const accept = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -26,6 +34,10 @@ const accept = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * rejectChallenge
+ * Rechaza un `Challenge` por id.
+ */
 const rejectChallenge = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -36,6 +48,10 @@ const rejectChallenge = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * complete
+ * Completa un `Challenge` indicando el `winner_id`.
+ */
 const complete = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);

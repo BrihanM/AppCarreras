@@ -3,6 +3,11 @@ import { User } from '../entities/User';
 import { v4 as uuidv4 } from 'uuid';
 import { getIo } from '../../../../socket';
 
+/**
+ * Servicio de dominio para `User`.
+ * - Encapsula operaciones CRUD sobre usuarios.
+ * - Emite eventos globales (`user:created`, `user:updated`, `user:deleted`).
+ */
 class UserService {
   private repo: IUserRepository;
 
@@ -10,6 +15,12 @@ class UserService {
     this.repo = repo;
   }
 
+  /**
+   * createUser
+   * Crea un usuario y emite evento `user:created`.
+   * @param {Partial<User>} attrs - Atributos del usuario.
+   * @returns {Promise<User>} Usuario creado.
+   */
   async createUser(attrs: Partial<User>): Promise<User> {
     const id = attrs.id || uuidv4();
     const user = await this.repo.create({ ...attrs, id } as any);
@@ -20,16 +31,34 @@ class UserService {
     return user;
   }
 
+  /**
+   * getUser
+   * Recupera un usuario por id.
+   * @param {string} id - Identificador del usuario.
+   * @returns {Promise<User|null>} Usuario o null.
+   */
   async getUser(id: string): Promise<User | null> {
     return this.repo.findById(id);
   }
 
+  /**
+   * updateUser
+   * Actualiza un usuario y emite `user:updated`.
+   * @param {string} id - Identificador.
+   * @param {Partial<User>} attrs - Campos a actualizar.
+   * @returns {Promise<User>} Usuario actualizado.
+   */
   async updateUser(id: string, attrs: Partial<User>): Promise<User> {
     const updated = await this.repo.update(id, attrs);
     try { const io = getIo(); if (io) io.emit('user:updated', updated); } catch (e) {}
     return updated;
   }
 
+  /**
+   * deleteUser
+   * Elimina un usuario y emite `user:deleted`.
+   * @param {string} id - Identificador del usuario.
+   */
   async deleteUser(id: string): Promise<void> {
     const user = await this.repo.findById(id);
     await this.repo.delete(id);
@@ -37,6 +66,11 @@ class UserService {
     return;
   }
 
+  /**
+   * listUsers
+   * Lista todos los usuarios.
+   * @returns {Promise<User[]>} Array de usuarios.
+   */
   async listUsers(): Promise<User[]> {
     return this.repo.findAll();
   }

@@ -6,6 +6,12 @@ import { createUserSchema, updateUserSchema } from '../validators/userSchemas';
 const repo = new UserRepositoryPg();
 const service = new UserService(repo);
 
+/**
+ * create
+ * Crea un nuevo `User`.
+ * - Valida la entrada con `createUserSchema`.
+ * - Devuelve 201 y el usuario creado.
+ */
 const create = async (req: Request, res: Response) => {
   try {
     const parsed = createUserSchema.parse(req.body);
@@ -16,6 +22,10 @@ const create = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * getById
+ * Recupera un `User` por id. Responde 404 si no existe.
+ */
 const getById = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -27,6 +37,10 @@ const getById = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * update
+ * Actualiza un `User` validando con `updateUserSchema`.
+ */
 const update = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -38,6 +52,10 @@ const update = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * remove
+ * Elimina un `User` por id. Responde 204 en caso de éxito.
+ */
 const remove = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -48,6 +66,10 @@ const remove = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * list
+ * Lista todos los usuarios.
+ */
 const list = async (_req: Request, res: Response) => {
   try {
     const items = await service.listUsers();

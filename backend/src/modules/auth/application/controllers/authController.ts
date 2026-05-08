@@ -7,6 +7,16 @@ import jwt from 'jsonwebtoken';
 const accountRepo = new AccountRepositoryPg();
 const service = new AuthService(accountRepo, null);
 
+/**
+ * login
+ * Controlador para autenticar a un usuario.
+ * - Valida la petición con `loginSchema`.
+ * - Llama a `AuthService.authenticate` para verificar credenciales.
+ * - Firma un JWT, lo devuelve en el cuerpo y lo establece como cookie HttpOnly.
+ *
+ * @param {Request} req - Petición Express con `identifier` y `password`.
+ * @param {Response} res - Respuesta Express.
+ */
 const login = async (req: Request, res: Response) => {
   try {
     const parsed = loginSchema.parse(req.body);

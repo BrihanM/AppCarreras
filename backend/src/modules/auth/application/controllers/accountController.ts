@@ -6,6 +6,12 @@ import { createAccountSchema } from '../validators/accountSchemas';
 const repo = new AccountRepositoryPg();
 const service = new AuthService(repo, null);
 
+/**
+ * create
+ * Controlador para crear una nueva `Account`.
+ * - Valida la petición con `createAccountSchema` y delega en `AuthService.createAccount`.
+ * - Responde con 201 y la entidad creada.
+ */
 const create = async (req: Request, res: Response) => {
   try {
     const parsed = createAccountSchema.parse(req.body);
@@ -16,6 +22,11 @@ const create = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * getById
+ * Recupera una `Account` por id.
+ * - Responde 404 si no se encuentra.
+ */
 const getById = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -27,6 +38,10 @@ const getById = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * update
+ * Actualiza una `Account`.
+ */
 const update = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
@@ -37,6 +52,10 @@ const update = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * remove
+ * Elimina una `Account` por id. Responde 204 en caso de éxito.
+ */
 const remove = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);

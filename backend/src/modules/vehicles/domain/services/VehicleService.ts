@@ -3,6 +3,12 @@ import { Vehicle } from '../entities/Vehicle';
 import { v4 as uuidv4 } from 'uuid';
 import { getIo } from '../../../../socket';
 
+/**
+ * Servicio de dominio para `Vehicle`.
+ * - Encapsula la lógica para crear, listar, activar y borrar vehículos.
+ * - Aplica reglas de negocio: máximo 3 vehículos por usuario y sólo 1 activo.
+ * - Emite eventos WebSocket a la sala `user:<id>` cuando corresponde.
+ */
 class VehicleService {
   private repo: IVehicleRepository;
 
@@ -10,6 +16,16 @@ class VehicleService {
     this.repo = repo;
   }
 
+  /**
+   * createVehicle
+   * Crea un vehículo para un usuario.
+   * - Valida que el usuario no tenga más de 3 vehículos.
+   * - Si el nuevo vehículo viene como `active`, desactiva los demás del usuario.
+   *
+   * @param {string} userId - Identificador del propietario.
+   * @param {Partial<Vehicle>} attrs - Atributos del vehículo.
+   * @returns {Promise<Vehicle>} Vehículo creado.
+   */
   async createVehicle(userId: string, attrs: Partial<Vehicle>): Promise<Vehicle> {
     const count = await this.repo.countByUserId(userId);
     if (count >= 3) throw new Error('User already has maximum number of vehicles (3)');
@@ -29,10 +45,25 @@ class VehicleService {
     return this.repo.create(vehicleToCreate as Vehicle);
   }
 
+  /**
+   * listByUser
+   * Lista los vehículos de un usuario.
+   * @param {string} userId - Identificador del usuario.
+   * @returns {Promise<Vehicle[]>} Array de vehículos.
+   */
   async listByUser(userId: string): Promise<Vehicle[]> {
     return this.repo.findByUserId(userId);
   }
 
+  /**
+   * activateVehicle
+   * Activa un vehículo concreto (y desactiva los demás del mismo usuario).
+   * - Lanza error si el vehículo no existe.
+   * - Emite evento `vehicle:activated` al propietario.
+   *
+   * @param {string} id - Identificador del vehículo a activar.
+   * @returns {Promise<Vehicle>} Vehículo activado.
+   */
   async activateVehicle(id: string): Promise<Vehicle> {
     const vehicle = await this.repo.findById(id);
     if (!vehicle) throw new Error('Vehicle not found');
@@ -45,6 +76,13 @@ class VehicleService {
     return activated;
   }
 
+  /**
+   * deleteVehicle
+   * Elimina un vehículo y emite evento `vehicle:deleted` al propietario.
+   *
+   * @param {string} id - Identificador del vehículo a eliminar.
+   * @returns {Promise<void>}
+   */
   async deleteVehicle(id: string): Promise<void> {
     const vehicle = await this.repo.findById(id);
     await this.repo.delete(id);

@@ -6,6 +6,10 @@ import { createNotificationSchema } from '../validators/notificationSchemas';
 const repo = new NotificationRepositoryPg();
 const service = new NotificationService(repo);
 
+/**
+ * list
+ * Lista notificaciones para un usuario. Requiere `user_id` como query param.
+ */
 const list = async (req: Request, res: Response) => {
   try {
     const userId = String(req.query.user_id || req.query.userId || '');
@@ -17,6 +21,10 @@ const list = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * create
+ * Crea una notificación y la emite al usuario correspondiente.
+ */
 const create = async (req: Request, res: Response) => {
   try {
     const parsed = createNotificationSchema.parse(req.body);
@@ -27,6 +35,10 @@ const create = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * markRead
+ * Marca una notificación como leída por id.
+ */
 const markRead = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
