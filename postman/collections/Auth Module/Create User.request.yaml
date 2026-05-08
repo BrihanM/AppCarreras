@@ -1,5 +1,4 @@
 $kind: http-request
-name: Create User
 url: "{{baseUrl}}/api/users"
 method: POST
 headers:
@@ -9,11 +8,11 @@ body:
   type: text
   content: |-
     {
-      "name": "Brihan M",
+      "name": "Test Pilot",
       "local_zone": "Zona A",
-      "city_area": "Medellín",
-      "state_zone": "Antioquia",
-      "country_zone": "Medellín",
+      "city_area": "Ciudad",
+      "state_zone": "Estado",
+      "country_zone": "Pais",
       "rank": "A",
       "category_id": null,
       "victories": 0,

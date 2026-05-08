@@ -1,26 +1,15 @@
 $kind: http-request
-url: "{{baseUrl}}/api/auth/login"
+url: "{{baseUrl}}/api/auth/refresh"
 method: POST
 headers:
   Content-Type: application/json
-body:
-  type: text
-  content: |-
-    {
-      "identifier": "testuser",
-      "password": "Password123"
-    }
 scripts:
   - type: afterResponse
     code: >-
       var json = pm.response.json();
 
-      // Guardar access token desde el body
-
       if (json && json.accessToken) { pm.environment.set('accessToken',
       json.accessToken); }
-
-      // Intentar leer cookie refreshToken y guardarla en variable de entorno
 
       var rt = pm.cookies.get('refreshToken');
 
@@ -29,4 +18,4 @@ scripts:
       pm.test('Status is 200', function () { pm.response.to.have.status(200);
       });
     language: text/javascript
-order: 2000
+order: 9000

@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/logout"
+method: POST
+scripts:
+  - type: afterResponse
+    code: >-
+      pm.environment.unset('accessToken');
+
+      pm.environment.unset('refreshToken');
+
+      pm.test('Status is 200', function () { pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 10000

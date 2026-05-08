@@ -59,7 +59,11 @@
           "script": {
             "exec": [
               "var json = pm.response.json();",
-              "if (json && json.token) { pm.environment.set('token', json.token); }",
+              "// Guardar access token desde el body",
+              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+              "// Intentar leer cookie refreshToken y guardarla en variable de entorno",
+              "var rt = pm.cookies.get('refreshToken');",
+              "if (rt) { pm.environment.set('refreshToken', rt); }",
               "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
             ]
           }
@@ -172,6 +176,55 @@
         "url": "{{baseUrl}}/api/accounts/{{accountId}}"
       },
       "response": []
+    },
+    {
+      "name": "Refresh Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/refresh"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json && json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+              "var rt = pm.cookies.get('refreshToken');",
+              "if (rt) { pm.environment.set('refreshToken', rt); }",
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.environment.unset('accessToken');",
+              "pm.environment.unset('refreshToken');",
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Update Account",
