@@ -14,6 +14,13 @@ const login = async (req: Request, res: Response) => {
     const secret = process.env.JWT_SECRET || 'changeme';
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
     const token = jwt.sign({ sub: account.id, username: account.username }, secret as any, { expiresIn } as any);
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // default 7 days
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge,
+    });
     res.json({ token });
   } catch (err: any) {
     res.status(400).json({ error: err.message });

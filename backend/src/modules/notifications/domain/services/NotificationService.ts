@@ -1,6 +1,7 @@
 import INotificationRepository from '../ports/INotificationRepository';
 import { Notification } from '../entities/Notification';
 import { v4 as uuidv4 } from 'uuid';
+import { getIo } from '../../../../socket';
 
 class NotificationService {
   private repo: INotificationRepository;
@@ -16,7 +17,16 @@ class NotificationService {
       id,
       is_read: attrs.is_read || false,
     };
-    return this.repo.create(toCreate);
+    const created = await this.repo.create(toCreate);
+    try {
+      const io = getIo();
+      if (io) {
+        io.to(`user:${created.user_id}`).emit('notification', created);
+      }
+    } catch (e) {
+      // swallow socket errors
+    }
+    return created;
   }
 
   async listForUser(userId: string): Promise<Notification[]> {

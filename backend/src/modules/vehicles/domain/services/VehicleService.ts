@@ -1,6 +1,7 @@
 import IVehicleRepository from '../ports/IVehicleRepository';
 import { Vehicle } from '../entities/Vehicle';
 import { v4 as uuidv4 } from 'uuid';
+import { getIo } from '../../../../socket';
 
 class VehicleService {
   private repo: IVehicleRepository;
@@ -36,11 +37,22 @@ class VehicleService {
     const vehicle = await this.repo.findById(id);
     if (!vehicle) throw new Error('Vehicle not found');
     await this.repo.deactivateAllForUser(vehicle.user_id);
-    return this.repo.activate(id);
+    const activated = await this.repo.activate(id);
+    try {
+      const io = getIo();
+      if (io) io.to(`user:${activated.user_id}`).emit('vehicle:activated', activated);
+    } catch (e) {}
+    return activated;
   }
 
   async deleteVehicle(id: string): Promise<void> {
-    return this.repo.delete(id);
+    const vehicle = await this.repo.findById(id);
+    await this.repo.delete(id);
+    try {
+      const io = getIo();
+      if (io && vehicle) io.to(`user:${vehicle.user_id}`).emit('vehicle:deleted', vehicle);
+    } catch (e) {}
+    return;
   }
 }
 
