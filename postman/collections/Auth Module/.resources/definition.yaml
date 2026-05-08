@@ -1,2 +1,5 @@
 $kind: collection
+name: Auth Module
 description: Collection to test the Auth microservice (accounts, users, auth).
+variables:
+  baseUrl: ""
