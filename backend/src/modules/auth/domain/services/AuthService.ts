@@ -4,6 +4,9 @@ import { Account } from '../entities/Account';
 import { User } from '../entities/User';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import RefreshTokenRepositoryPg from '../../infrastructure/adapters/pg/RefreshTokenRepositoryPg';
+import { hashToken } from '../../infrastructure/utils/hashToken';
+import crypto from 'crypto';
 import { getIo } from '../../../../socket';
 
 /**
@@ -15,10 +18,12 @@ import { getIo } from '../../../../socket';
 class AuthService {
   private accountRepo: IAccountRepository;
   private userRepo: IUserRepository | null;
+  private refreshRepo: RefreshTokenRepositoryPg | null;
 
-  constructor(accountRepo: IAccountRepository, userRepo: IUserRepository | null) {
+  constructor(accountRepo: IAccountRepository, userRepo: IUserRepository | null, refreshRepo?: RefreshTokenRepositoryPg | null) {
     this.accountRepo = accountRepo;
     this.userRepo = userRepo;
+    this.refreshRepo = refreshRepo || null;
   }
 
   /**
@@ -165,6 +170,62 @@ class AuthService {
     const match = await bcrypt.compare(password, account.password_hash);
     if (!match) throw new Error('Invalid credentials');
     return account;
+  }
+
+  /**
+   * createRefreshToken
+   * Genera un refresh token aleatorio, guarda su hash en la BD y devuelve el token en claro.
+   * @param userId
+   */
+  async createRefreshToken(userId: string, ip?: string, userAgent?: string): Promise<{ token: string; expiresAt: Date }> {
+    if (!this.refreshRepo) throw new Error('Refresh token repository not configured');
+    const token = crypto.randomBytes(64).toString('hex');
+    const tokenHash = hashToken(token);
+    const days = Number(process.env.REFRESH_TOKEN_DAYS) || 7;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const row = await this.refreshRepo.create({ userId, tokenHash, expiresAt, ip, userAgent });
+    return { token, expiresAt };
+  }
+
+  /**
+   * rotateRefreshToken
+   * Valida un refresh token presentado, detecta reuse y rota (genera uno nuevo y marca el antiguo como replaced).
+   */
+  async rotateRefreshToken(oldToken: string, ip?: string, userAgent?: string): Promise<{ token: string; expiresAt: Date; userId: string }> {
+    if (!this.refreshRepo) throw new Error('Refresh token repository not configured');
+    const hashed = hashToken(oldToken);
+    const row = await this.refreshRepo.findByTokenHash(hashed);
+    if (!row) {
+      // reuse or invalid token -> cannot rotate, best-effort revoke all
+      throw new Error('Invalid refresh token');
+    }
+    if (row.revoked_at) {
+      // token was revoked -> possible reuse
+      await this.refreshRepo.revokeAllForUser(row.user_id);
+      throw new Error('Refresh token revoked');
+    }
+    // create new
+    const newToken = crypto.randomBytes(64).toString('hex');
+    const newHash = hashToken(newToken);
+    const days = Number(process.env.REFRESH_TOKEN_DAYS) || 7;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const created = await this.refreshRepo.create({ userId: row.user_id, tokenHash: newHash, expiresAt, ip, userAgent });
+    // mark replaced
+    await this.refreshRepo.markReplaced(row.id, created.id);
+    return { token: newToken, expiresAt, userId: row.user_id };
+  }
+
+  /**
+   * revokeRefreshToken
+   * Marca como revocado un refresh token dado en claro.
+   */
+  async revokeRefreshToken(token: string): Promise<void> {
+    if (!this.refreshRepo) throw new Error('Refresh token repository not configured');
+    const hashed = hashToken(token);
+    const row = await this.refreshRepo.findByTokenHash(hashed);
+    if (!row) return;
+    await this.refreshRepo.revoke(row.id, 'logout');
+    return;
   }
 }
 

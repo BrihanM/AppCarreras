@@ -16,10 +16,14 @@ export function extractTokenFromRequest(req: Request): string | null {
   const auth = req.headers.authorization as string | undefined;
   if (auth && auth.startsWith('Bearer ')) return auth.slice(7);
   const cookies = (req as any).cookies || {};
+  // Prefer access token cookie if present (accessToken), fall back to legacy `token` cookie
+  if (cookies.accessToken) return cookies.accessToken;
   if (cookies.token) return cookies.token;
   // allow custom header that may carry cookie string (e.g., from some web clients)
   const cookieHeader = req.headers['x-cookie'] as string | undefined;
   if (cookieHeader) {
+    const matchAccess = cookieHeader.split(';').map(p => p.trim()).find(p => p.startsWith('accessToken='));
+    if (matchAccess) return decodeURIComponent(matchAccess.split('=')[1]);
     const match = cookieHeader.split(';').map(p => p.trim()).find(p => p.startsWith('token='));
     if (match) return decodeURIComponent(match.split('=')[1]);
   }
