@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+/**
+ * createVehicleSchema
+ * Valida la creación de un `Vehicle`.
+ */
 export const createVehicleSchema = z.object({
   make: z.string().min(1).max(100),
   model: z.string().min(1).max(100),
@@ -7,6 +11,10 @@ export const createVehicleSchema = z.object({
   active: z.boolean().optional(),
 });
 
+/**
+ * activateVehicleSchema
+ * Esquema vacío para la operación de activar vehículo (extensible).
+ */
 export const activateVehicleSchema = z.object({
   // no body expected, kept for future extensibility
 });

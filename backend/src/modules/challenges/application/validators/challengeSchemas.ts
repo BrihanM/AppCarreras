@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+/**
+ * createChallengeSchema
+ * Valida la creación de un `Challenge`.
+ */
 export const createChallengeSchema = z.object({
   challenger_id: z.string().uuid(),
   challenged_id: z.string().uuid(),
@@ -11,6 +15,10 @@ export const createChallengeSchema = z.object({
   notes: z.string().optional(),
 });
 
+/**
+ * completeChallengeSchema
+ * Valida la finalización de un `Challenge` indicando `winner_id`.
+ */
 export const completeChallengeSchema = z.object({
   winner_id: z.string().uuid(),
   notes: z.string().optional(),

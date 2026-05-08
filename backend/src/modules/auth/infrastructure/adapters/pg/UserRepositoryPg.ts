@@ -2,7 +2,14 @@ import IUserRepository from '../../../domain/ports/IUserRepository';
 import { User } from '../../../domain/entities/User';
 import { pool } from '../../db';
 
+/**
+ * Repositorio PostgreSQL para `User` (módulo auth).
+ */
 class UserRepositoryPg implements IUserRepository {
+  /**
+   * create
+   * Inserta un nuevo usuario.
+   */
   async create(user: Partial<User>): Promise<User> {
     const q = `INSERT INTO users (id, name, local_zone, city_area, state_zone, country_zone, rank, category_id, victories, defeats, consecutive_challenges, state, account_id)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`;
@@ -25,21 +32,37 @@ class UserRepositoryPg implements IUserRepository {
     return rows[0];
   }
 
+  /**
+   * findById
+   * Recupera un usuario por id.
+   */
   async findById(id: string): Promise<User | null> {
     const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0] || null;
   }
 
+  /**
+   * findByAccountId
+   * Busca un usuario por `account_id`.
+   */
   async findByAccountId(accountId: string): Promise<User | null> {
     const { rows } = await pool.query('SELECT * FROM users WHERE account_id = $1', [accountId]);
     return rows[0] || null;
   }
 
+  /**
+   * findAll
+   * Lista todos los usuarios ordenados por creación.
+   */
   async findAll(): Promise<User[]> {
     const { rows } = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
     return rows;
   }
 
+  /**
+   * update
+   * Actualiza un usuario existente y devuelve la fila actualizada.
+   */
   async update(id: string, attrs: Partial<User>): Promise<User> {
     const existing = await this.findById(id);
     if (!existing) throw new Error('User not found');
@@ -64,6 +87,10 @@ class UserRepositoryPg implements IUserRepository {
     return rows[0];
   }
 
+  /**
+   * delete
+   * Elimina un usuario por id.
+   */
   async delete(id: string): Promise<void> {
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
   }

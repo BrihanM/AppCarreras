@@ -3,6 +3,15 @@ import jwt from 'jsonwebtoken';
 
 const secret = process.env.JWT_SECRET || 'changeme';
 
+/**
+ * extractTokenFromRequest
+ * Extrae un token JWT de la petición buscando en:
+ * - Header `Authorization: Bearer <token>`
+ * - Cookie `token` (populada por `parseCookies`)
+ * - Header personalizado `x-cookie` que contenga la cookie `token=`.
+ *
+ * Devuelve `null` si no encuentra token.
+ */
 export function extractTokenFromRequest(req: Request): string | null {
   const auth = req.headers.authorization as string | undefined;
   if (auth && auth.startsWith('Bearer ')) return auth.slice(7);
@@ -17,6 +26,12 @@ export function extractTokenFromRequest(req: Request): string | null {
   return null;
 }
 
+/**
+ * cookieAuth
+ * Middleware factory que verifica JWT extraído por `extractTokenFromRequest`.
+ * - Si `optional` es true, la ausencia o invalidación del token no bloquea la petición.
+ * - Si `optional` es false, responde 401 cuando falta o es inválido.
+ */
 export default function cookieAuth(optional = true) {
   return (req: Request, res: Response, next: NextFunction) => {
     const token = extractTokenFromRequest(req);

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+/**
+ * createUserSchema
+ * Esquema Zod para crear un `User`.
+ */
 export const createUserSchema = z.object({
   name: z.string().min(1).max(150),
   local_zone: z.string().optional(),
@@ -15,6 +19,10 @@ export const createUserSchema = z.object({
   account_id: z.string().uuid().optional().nullable(),
 });
 
+/**
+ * updateUserSchema
+ * Versión parcial para actualizaciones de `User`.
+ */
 export const updateUserSchema = createUserSchema.partial();
 
 export type CreateUserDTO = z.infer<typeof createUserSchema>;

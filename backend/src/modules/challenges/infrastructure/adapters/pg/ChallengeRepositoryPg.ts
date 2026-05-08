@@ -2,7 +2,14 @@ import IChallengeRepository from '../../../domain/ports/IChallengeRepository';
 import { Challenge } from '../../../domain/entities/Challenge';
 import { pool } from '../../db';
 
+/**
+ * Repositorio PostgreSQL para `Challenge`.
+ */
 class ChallengeRepositoryPg implements IChallengeRepository {
+  /**
+   * create
+   * Inserta un nuevo challenge.
+   */
   async create(c: Partial<Challenge>): Promise<Challenge> {
     const q = `INSERT INTO challenges (id, challenger_id, challenged_id, career_type, challenger_vehicle_id, challenged_vehicle_id, state, winner_id, agreed_location, agreed_date, notes)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`;
@@ -23,11 +30,19 @@ class ChallengeRepositoryPg implements IChallengeRepository {
     return rows[0];
   }
 
+  /**
+   * findById
+   * Recupera un challenge por id.
+   */
   async findById(id: string): Promise<Challenge | null> {
     const { rows } = await pool.query('SELECT * FROM challenges WHERE id = $1', [id]);
     return rows[0] || null;
   }
 
+  /**
+   * update
+   * Actualiza campos permitidos de un challenge y devuelve la fila actualizada.
+   */
   async update(id: string, attrs: Partial<Challenge>): Promise<Challenge> {
     const existing = await this.findById(id);
     if (!existing) throw new Error('Challenge not found');
@@ -38,11 +53,19 @@ class ChallengeRepositoryPg implements IChallengeRepository {
     return rows[0];
   }
 
+  /**
+   * listByUser
+   * Lista challenges asociados a un usuario (como retador o retado).
+   */
   async listByUser(userId: string): Promise<Challenge[]> {
     const { rows } = await pool.query('SELECT * FROM challenges WHERE challenger_id = $1 OR challenged_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   }
 
+  /**
+   * existsActiveBetween
+   * Determina si hay un challenge activo (pending/accepted) entre dos usuarios.
+   */
   async existsActiveBetween(userA: string, userB: string): Promise<boolean> {
     const q = `SELECT 1 FROM challenges WHERE (
       (challenger_id = $1 AND challenged_id = $2) OR (challenger_id = $2 AND challenged_id = $1)
@@ -51,6 +74,10 @@ class ChallengeRepositoryPg implements IChallengeRepository {
     return rows.length > 0;
   }
 
+  /**
+   * delete
+   * Elimina un challenge por id.
+   */
   async delete(id: string): Promise<void> {
     await pool.query('DELETE FROM challenges WHERE id = $1', [id]);
   }

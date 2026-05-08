@@ -2,7 +2,14 @@ import IAccountRepository from '../../../domain/ports/IAccountRepository';
 import { Account } from '../../../domain/entities/Account';
 import { pool } from '../../db';
 
+/**
+ * Repositorio PostgreSQL para `Account`.
+ */
 class AccountRepositoryPg implements IAccountRepository {
+  /**
+   * create
+   * Inserta una nueva cuenta en la tabla `accounts`.
+   */
   async create(account: Partial<Account>): Promise<Account> {
     const q = `INSERT INTO accounts (id, username, email, password_hash, photo, last_connection)
       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`;
@@ -11,21 +18,37 @@ class AccountRepositoryPg implements IAccountRepository {
     return rows[0];
   }
 
+  /**
+   * findById
+   * Recupera una cuenta por id.
+   */
   async findById(id: string): Promise<Account | null> {
     const { rows } = await pool.query('SELECT * FROM accounts WHERE id = $1', [id]);
     return rows[0] || null;
   }
 
+  /**
+   * findByUsername
+   * Busca una cuenta por `username`.
+   */
   async findByUsername(username: string): Promise<Account | null> {
     const { rows } = await pool.query('SELECT * FROM accounts WHERE username = $1', [username]);
     return rows[0] || null;
   }
 
+  /**
+   * findByEmail
+   * Busca una cuenta por `email`.
+   */
   async findByEmail(email: string): Promise<Account | null> {
     const { rows } = await pool.query('SELECT * FROM accounts WHERE email = $1', [email]);
     return rows[0] || null;
   }
 
+  /**
+   * update
+   * Actualiza una cuenta y devuelve la fila actualizada.
+   */
   async update(id: string, attrs: Partial<Account>): Promise<Account> {
     const existing = await this.findById(id);
     if (!existing) throw new Error('Account not found');
@@ -36,6 +59,10 @@ class AccountRepositoryPg implements IAccountRepository {
     return rows[0];
   }
 
+  /**
+   * delete
+   * Elimina una cuenta por id.
+   */
   async delete(id: string): Promise<void> {
     await pool.query('DELETE FROM accounts WHERE id = $1', [id]);
   }

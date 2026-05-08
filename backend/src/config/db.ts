@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+/**
+ * pool
+ * Pool de conexiones a PostgreSQL usado por los repositorios.
+ * Configurable mediante variables de entorno: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+ */
 export const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
@@ -11,6 +16,10 @@ export const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
+/**
+ * connectDB
+ * Verifica la conexión inicial al pool y termina el proceso si hay error.
+ */
 export const connectDB = async (): Promise<void> => {
   try {
     const client = await pool.connect();

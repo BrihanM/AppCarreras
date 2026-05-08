@@ -2,7 +2,14 @@ import ICategoryRepository from '../../../domain/ports/ICategoryRepository';
 import { CompetitionCategory } from '../../../domain/entities/CompetitionCategory';
 import { pool } from '../../db';
 
+/**
+ * Repositorio PostgreSQL para `CompetitionCategory`.
+ */
 class CategoryRepositoryPg implements ICategoryRepository {
+  /**
+   * create
+   * Inserta una categoría de competición.
+   */
   async create(c: Partial<CompetitionCategory>): Promise<CompetitionCategory> {
     const q = `INSERT INTO competition_categories (id,name,description,is_active) VALUES ($1,$2,$3,$4) RETURNING *`;
     const values = [c.id, c.name, c.description || null, c.is_active ?? true];
@@ -10,16 +17,28 @@ class CategoryRepositoryPg implements ICategoryRepository {
     return rows[0];
   }
 
+  /**
+   * findById
+   * Recupera una categoría por id.
+   */
   async findById(id: string): Promise<CompetitionCategory | null> {
     const { rows } = await pool.query('SELECT * FROM competition_categories WHERE id = $1', [id]);
     return rows[0] || null;
   }
 
+  /**
+   * findAll
+   * Lista todas las categorías ordenadas por nombre.
+   */
   async findAll(): Promise<CompetitionCategory[]> {
     const { rows } = await pool.query('SELECT * FROM competition_categories ORDER BY name ASC');
     return rows;
   }
 
+  /**
+   * update
+   * Actualiza una categoría y devuelve la fila actualizada.
+   */
   async update(id: string, attrs: Partial<CompetitionCategory>): Promise<CompetitionCategory> {
     const existing = await this.findById(id);
     if (!existing) throw new Error('Category not found');
@@ -30,6 +49,10 @@ class CategoryRepositoryPg implements ICategoryRepository {
     return rows[0];
   }
 
+  /**
+   * delete
+   * Elimina una categoría por id.
+   */
   async delete(id: string): Promise<void> {
     await pool.query('DELETE FROM competition_categories WHERE id = $1', [id]);
   }
