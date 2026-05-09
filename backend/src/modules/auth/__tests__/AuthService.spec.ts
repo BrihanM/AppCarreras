@@ -3,7 +3,7 @@
  * AuthService.spec.ts
  * Tests unitarios para `AuthService`.
  * - Casos de error: credenciales inválidas, refresh token inválido/propio.
- * - Casos felices: authenticate válido, creación/rotación/revocación de refresh tokens.
+ * - Casos correctos: authenticate válido, creación/rotación/revocación de refresh tokens.
  */
 jest.mock('uuid', () => ({ v4: () => 'mock-uuid' }));
 
