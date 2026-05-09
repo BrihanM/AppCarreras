@@ -51,19 +51,21 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', creden
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(parseCookies);
-// attach optional auth from cookie or Authorization header
+// Adjuntar autenticación opcional desde cookie o encabezado de autorización
 app.use(cookieAuth(true));
 
-// Enforce authentication for all /api routes except the auth module (login/refresh/logout)
+// Aplicar la autenticación a todas las rutas /api excepto al módulo de autenticación (inicio de sesión/actualización/cierre de sesión).
 app.use('/api', (req, res, next) => {
-  // allow unauthenticated access to auth endpoints
+  // permitir acceso no autenticado a los endpoints de autenticación (/api/auth/*)
   if (req.path && req.path.startsWith('/auth')) return next();
-  // allow if cookieAuth populated req.user
+  // permitir crear cuentas y usuarios sin autenticación
+  if (req.method === 'POST' && (req.path === '/accounts' || req.path === '/users')) return next();
+  // permitir si cookieAuth pobló req.user
   if ((req as any).user) return next();
   return res.status(401).json({ error: 'Unauthorized' });
 });
 
-// Routes
+// Rutas
 /**
  * Healthcheck
  * @route GET /health
@@ -121,6 +123,7 @@ io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`, user ? 'user=' + JSON.stringify(user) : 'anonymous');
   if (user && user.id) {
     socket.join(`user:${user.id}`);
+    console.log(`Client joined room: user:${user.id}`);
   }
 
   socket.on('disconnect', () => {
@@ -130,7 +133,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 4000;
 
-// Connect to DB and start
+// Connectar a la base de datos y iniciar el servidor
 connectDB().then(() => {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
