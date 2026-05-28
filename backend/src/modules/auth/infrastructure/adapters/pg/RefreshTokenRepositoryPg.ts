@@ -26,9 +26,20 @@ export default class RefreshTokenRepositoryPg {
    * Inserta un refresh token (hash) en la tabla.
    */
   async create(data: { id?: string; userId: string; tokenHash: string; expiresAt: Date; ip?: string; userAgent?: string }) {
-    const id = data.id || null;
-    const q = `INSERT INTO refresh_tokens(id, user_id, token_hash, expires_at, ip, user_agent) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`;
-    const values = [id, data.userId, data.tokenHash, data.expiresAt.toISOString(), data.ip || null, data.userAgent || null];
+    const baseColumns = ['user_id', 'token_hash', 'expires_at', 'ip', 'user_agent'];
+    const baseValues: any[] = [data.userId, data.tokenHash, data.expiresAt.toISOString(), data.ip || null, data.userAgent || null];
+
+    let columns = baseColumns.slice();
+    let values = baseValues.slice();
+
+    if (data.id) {
+      columns = ['id', ...columns];
+      values = [data.id, ...values];
+    }
+
+    const cols = columns.join(', ');
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(',');
+    const q = `INSERT INTO refresh_tokens(${cols}) VALUES(${placeholders}) RETURNING *`;
     const { rows } = await pool.query(q, values as any);
     return rows[0] as RefreshTokenRow;
   }

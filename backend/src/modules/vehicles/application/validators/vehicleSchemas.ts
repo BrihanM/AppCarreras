@@ -16,7 +16,7 @@ export const createVehicleSchema = z.object({
  * Esquema vacío para la operación de activar vehículo (extensible).
  */
 export const activateVehicleSchema = z.object({
-  // no body expected, kept for future extensibility
+  // 
 });
 
 export type CreateVehicleDTO = z.infer<typeof createVehicleSchema>;

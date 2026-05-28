@@ -87,4 +87,3 @@ Siguientes pasos sugeridos
 - Añadir tests de integración que verifiquen emisiones WebSocket.
 
 ---
-Si quieres, ahora empiezo a añadir JSDoc en español al archivo `src/index.ts` (primer archivo). ¿Procedo? 
