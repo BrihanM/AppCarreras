@@ -1,0 +1,133 @@
+<div class="vehicles-page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-header__title">🏎️ Mi Garaje</h1>
+      <p class="page-header__sub">Gestiona tu flota de vehículos de carrera</p>
+    </div>
+    <button class="btn btn--primary" (click)="openModal()">
+      <span>+</span> Agregar Vehículo
+    </button>
+  </div>
+
+  <!-- Galería -->
+  @if (facade.isLoading()) {
+    <div class="vehicles-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="vehicle-card-skeleton">
+          <srx-skeleton width="100%" height="180px" borderRadius="12px" />
+          <div class="vehicle-card-skeleton__info">
+            <srx-skeleton width="60%" height="18px" />
+            <srx-skeleton width="40%" height="14px" />
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (facade.vehicles().length === 0) {
+    <srx-empty-state
+      icon="🚗"
+      title="Sin vehículos registrados"
+      message="Agrega tu primer vehículo de carrera para comenzar."
+    >
+      <button class="btn btn--primary" (click)="openModal()">Agregar primer vehículo</button>
+    </srx-empty-state>
+  } @else {
+    <div class="vehicles-grid">
+      @for (vehicle of facade.vehicles(); track vehicle.id) {
+        <div class="vehicle-card" [class.vehicle-card--active]="vehicle.isActive">
+          @if (vehicle.isActive) {
+            <div class="vehicle-card__active-badge">⚡ ACTIVO</div>
+          }
+
+          <!-- Imagen del vehículo -->
+          <div class="vehicle-card__image">
+            @if (vehicle.imageUrl) {
+              <img [src]="vehicle.imageUrl" [alt]="vehicle.brand + ' ' + vehicle.model" />
+            } @else {
+              <div class="vehicle-card__image-placeholder">🏎️</div>
+            }
+          </div>
+
+          <!-- Info del vehículo -->
+          <div class="vehicle-card__body">
+            <h3 class="vehicle-card__name">{{ vehicle.brand }} {{ vehicle.model }}</h3>
+            <p class="vehicle-card__year">{{ vehicle.year }} · {{ vehicle.color }}</p>
+            @if (vehicle.horsepower) {
+              <p class="vehicle-card__hp">⚡ {{ vehicle.horsepower }} HP</p>
+            }
+            @if (vehicle.plate) {
+              <p class="vehicle-card__plate">🪪 {{ vehicle.plate }}</p>
+            }
+          </div>
+
+          <!-- Acciones -->
+          <div class="vehicle-card__actions">
+            @if (!vehicle.isActive) {
+              <button
+                class="btn btn--secondary btn--sm"
+                (click)="facade.activateVehicle(vehicle.id)"
+              >Activar</button>
+            }
+            <button
+              class="btn btn--danger btn--sm"
+              (click)="facade.deleteVehicle(vehicle.id)"
+            >Eliminar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Modal Crear Vehículo -->
+@if (showCreateModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <h2>Registrar Vehículo</h2>
+        <button class="modal__close" (click)="closeModal()">✕</button>
+      </div>
+
+      <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Marca</label>
+            <input class="form-input" formControlName="brand" placeholder="Toyota" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modelo</label>
+            <input class="form-input" formControlName="model" placeholder="Supra" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Año</label>
+            <input class="form-input" type="number" formControlName="year" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <input class="form-input" formControlName="color" placeholder="Rojo" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Placa (opcional)</label>
+            <input class="form-input" formControlName="plate" placeholder="ABC-123" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">HP (opcional)</label>
+            <input class="form-input" type="number" formControlName="horsepower" placeholder="320" />
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="btn btn--secondary" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn--primary" [disabled]="facade.isSaving()">
+            {{ facade.isSaving() ? 'Guardando...' : 'Registrar Vehículo' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

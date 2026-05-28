@@ -1,0 +1,49 @@
+<aside class="sidebar" [class.sidebar--open]="isOpen">
+  <!-- Perfil rápido -->
+  <div class="sidebar__profile">
+    <div class="sidebar__avatar">
+      @if (currentUser?.avatarUrl) {
+          <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.username" />
+        } @else {
+          <div class="sidebar__avatar-placeholder">
+            {{ currentUser?.username?.charAt(0)?.toUpperCase() }}
+          </div>
+        }
+      <div class="sidebar__status-dot"></div>
+    </div>
+    <div class="sidebar__user-info">
+      <p class="sidebar__username">{{ currentUser?.username }}</p>
+      <p class="sidebar__rank">Rank #{{ currentUser?.rank }}</p>
+    </div>
+  </div>
+
+  <!-- Stats rápidas -->
+  <div class="sidebar__stats">
+      <div class="sidebar__stat">
+      <span class="sidebar__stat-value">{{ currentUser?.wins ?? 0 }}</span>
+      <span class="sidebar__stat-label">Victorias</span>
+    </div>
+    <div class="sidebar__stat">
+      <span class="sidebar__stat-value">{{ currentUser?.points ?? 0 }}</span>
+      <span class="sidebar__stat-label">Puntos</span>
+    </div>
+    <div class="sidebar__stat">
+      <span class="sidebar__stat-value">{{ currentUser?.losses ?? 0 }}</span>
+      <span class="sidebar__stat-label">Derrotas</span>
+    </div>
+  </div>
+
+  <!-- Navegación -->
+  <nav class="sidebar__nav">
+    @for (item of visibleNavItems; track item.route) {
+      <a
+        class="sidebar__nav-item"
+        [routerLink]="item.route"
+        routerLinkActive="sidebar__nav-item--active"
+      >
+        <span class="sidebar__nav-icon">{{ item.icon }}</span>
+        <span class="sidebar__nav-label">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+</aside>

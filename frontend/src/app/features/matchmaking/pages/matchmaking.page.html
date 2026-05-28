@@ -1,0 +1,84 @@
+<div class="matchmaking-page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-header__title">⚡ Matchmaking</h1>
+      <p class="page-header__sub">Encuentra tu próximo rival en las calles</p>
+    </div>
+    <div class="page-header__filters">
+      <input
+        class="filter-input"
+        type="text"
+        placeholder="Filtrar por ciudad..."
+        [(ngModel)]="cityFilter"
+        (keyup.enter)="applyFilter()"
+      />
+      <button class="btn btn--primary btn--sm" (click)="applyFilter()">Buscar</button>
+    </div>
+  </div>
+
+  @if (facade.isLoading()) {
+    <div class="pilots-grid">
+      @for (i of [1,2,3,4,5,6,7,8]; track i) {
+        <div class="pilot-card-skeleton">
+          <srx-skeleton width="80px" height="80px" borderRadius="50%" />
+          <srx-skeleton width="60%" height="16px" />
+          <srx-skeleton width="40%" height="14px" />
+          <srx-skeleton width="100%" height="36px" borderRadius="8px" />
+        </div>
+      }
+    </div>
+  } @else if (facade.pilots().length === 0) {
+    <srx-empty-state
+      icon="🏎️"
+      title="Sin pilotos disponibles"
+      message="No hay pilotos disponibles con esos filtros. Intenta con otra ciudad."
+    />
+  } @else {
+    <div class="pilots-grid">
+      @for (pilot of facade.pilots(); track pilot.id) {
+        <div class="pilot-card">
+          <!-- Avatar -->
+          <div class="pilot-card__avatar">
+            @if (pilot.avatarUrl) {
+              <img [src]="pilot.avatarUrl" [alt]="pilot.username" />
+            } @else {
+              <div class="pilot-card__avatar-placeholder">
+                {{ pilot.username.charAt(0).toUpperCase() }}
+              </div>
+            }
+          </div>
+
+          <!-- Info -->
+          <h3 class="pilot-card__name">{{ pilot.username }}</h3>
+          <p class="pilot-card__city">📍 {{ pilot.city ?? 'Ciudad desconocida' }}</p>
+
+          <!-- Stats -->
+          <div class="pilot-card__stats">
+            <div class="pilot-card__stat">
+              <span>🏆</span> {{ pilot.wins }}
+            </div>
+            <div class="pilot-card__stat pilot-card__stat--rank">
+              Rank #{{ pilot.rank }}
+            </div>
+            <div class="pilot-card__stat">
+              <span>⭐</span> {{ pilot.points }}
+            </div>
+          </div>
+
+          <!-- Acción -->
+          <button
+            class="pilot-card__challenge-btn"
+            [disabled]="challengedIds.has(pilot.id)"
+            (click)="challengePilot(pilot)"
+          >
+            @if (challengedIds.has(pilot.id)) {
+              ✓ RETO ENVIADO
+            } @else {
+              ⚡ RETAR
+            }
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -39,7 +39,8 @@ const login = async (req: Request, res: Response) => {
       sameSite: 'lax',
       maxAge,
     });
-    res.json({ accessToken, expiresAt });
+    // Return standardized ApiResponse shape expected by frontend
+    res.json({ success: true, message: 'Authenticated', data: { user: account, accessToken, expiresAt } });
     console.log('TOKEN', accessToken);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

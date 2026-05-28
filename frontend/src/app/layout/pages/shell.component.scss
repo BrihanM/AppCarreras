@@ -1,0 +1,16 @@
+:host {
+  display: contents;
+}
+
+.shell__content {
+  margin-top: var(--navbar-height, 64px);
+  margin-left: var(--sidebar-width, 240px);
+  min-height: calc(100vh - var(--navbar-height, 64px));
+  padding: 2rem;
+  transition: margin-left 0.3s ease;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}

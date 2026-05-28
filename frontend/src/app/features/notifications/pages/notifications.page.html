@@ -1,0 +1,55 @@
+<div class="notifications-page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-header__title">🔔 Notificaciones</h1>
+      <p class="page-header__sub">
+        {{ facade.unreadCount() }} sin leer
+      </p>
+    </div>
+    @if (facade.unreadCount() > 0) {
+      <button class="btn btn--secondary btn--sm" (click)="facade.markAllAsRead()">
+        ✓ Marcar todas como leídas
+      </button>
+    }
+  </div>
+
+  @if (facade.isLoading()) {
+    <div class="notification-list">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="notification-skeleton">
+          <srx-skeleton width="40px" height="40px" borderRadius="50%" />
+          <div class="notification-skeleton__info">
+            <srx-skeleton width="300px" height="14px" />
+            <srx-skeleton width="180px" height="12px" />
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (facade.notifications().length === 0) {
+    <srx-empty-state
+      icon="🔕"
+      title="Sin notificaciones"
+      message="No tienes notificaciones por el momento. ¡Reta a alguien!"
+    />
+  } @else {
+    <div class="notification-list">
+      @for (notification of facade.notifications(); track notification.id) {
+        <div
+          class="notification-item"
+          [class.notification-item--unread]="!notification.isRead"
+          (click)="facade.markAsRead(notification.id)"
+        >
+          <div class="notification-item__icon">🔔</div>
+          <div class="notification-item__body">
+            <p class="notification-item__title">{{ notification.title }}</p>
+            <p class="notification-item__message">{{ notification.message }}</p>
+            <p class="notification-item__time">{{ notification.createdAt | date:'dd MMM · HH:mm' }}</p>
+          </div>
+          @if (!notification.isRead) {
+            <div class="notification-item__dot"></div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

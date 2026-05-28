@@ -1,0 +1,87 @@
+<div class="profile-page">
+
+  <!-- Header del perfil -->
+  <div class="profile-hero">
+    <div class="profile-hero__avatar">
+      @if (facade.currentUser()?.avatarUrl) {
+        <img [src]="facade.currentUser()!.avatarUrl" [alt]="facade.currentUser()!.username" />
+      } @else {
+        <div class="profile-hero__avatar-placeholder">
+          {{ facade.currentUser()?.username?.charAt(0)?.toUpperCase() }}
+        </div>
+      }
+    </div>
+    <div class="profile-hero__info">
+      <h1 class="profile-hero__username">{{ facade.currentUser()?.username }}</h1>
+      <p class="profile-hero__bio">{{ facade.currentUser()?.bio ?? 'Sin bio aún...' }}</p>
+      <p class="profile-hero__city">
+        @if (facade.currentUser()?.city) { 📍 {{ facade.currentUser()!.city }} }
+      </p>
+    </div>
+    <div class="profile-hero__actions">
+      @if (!isEditing) {
+        <button class="btn btn--secondary" (click)="startEditing()">✏️ Editar Perfil</button>
+      }
+    </div>
+  </div>
+
+  <!-- Stats del piloto -->
+  <div class="profile-stats">
+    <div class="stat-card">
+      <span class="stat-card__value">{{ facade.currentUser()?.rank ?? '-' }}</span>
+      <span class="stat-card__label">Ranking</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__value">{{ facade.currentUser()?.points ?? 0 }}</span>
+      <span class="stat-card__label">Puntos</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__value">{{ facade.currentUser()?.wins ?? 0 }}</span>
+      <span class="stat-card__label">Victorias</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__value">{{ facade.currentUser()?.losses ?? 0 }}</span>
+      <span class="stat-card__label">Derrotas</span>
+    </div>
+  </div>
+
+  <!-- Formulario de edición -->
+  @if (isEditing) {
+    <div class="profile-edit">
+      <h2 class="profile-edit__title">Editar Información</h2>
+      <form class="edit-form" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input class="form-input" formControlName="firstName" placeholder="Ej: Carlos" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Apellido</label>
+            <input class="form-input" formControlName="lastName" placeholder="Ej: Pérez" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio</label>
+          <textarea class="form-input form-textarea" formControlName="bio" placeholder="Cuéntanos sobre ti..." rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ciudad</label>
+            <input class="form-input" formControlName="city" placeholder="Bogotá" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">URL Avatar</label>
+            <input class="form-input" formControlName="avatarUrl" placeholder="https://..." />
+          </div>
+        </div>
+        <div class="edit-form__actions">
+          <button type="button" class="btn btn--secondary" (click)="cancelEditing()">Cancelar</button>
+          <button type="submit" class="btn btn--primary" [disabled]="facade.isSaving()">
+            {{ facade.isSaving() ? 'Guardando...' : 'Guardar Cambios' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+</div>

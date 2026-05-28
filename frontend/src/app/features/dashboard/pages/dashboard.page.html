@@ -1,0 +1,130 @@
+<div class="dashboard">
+
+  <!-- Hero bienvenida -->
+  <section class="dashboard__hero">
+    <div class="dashboard__hero-content">
+      <p class="dashboard__greeting">Bienvenido de vuelta, piloto</p>
+      <h1 class="dashboard__name">
+        {{ facade.currentUser()?.username }}
+        <span class="dashboard__rank-badge">Rank #{{ facade.currentUser()?.rank }}</span>
+      </h1>
+      <div class="dashboard__quick-stats">
+        <div class="quick-stat">
+          <span class="quick-stat__value">{{ facade.currentUser()?.points ?? 0 }}</span>
+          <span class="quick-stat__label">Puntos</span>
+        </div>
+        <div class="quick-stat">
+          <span class="quick-stat__value">{{ facade.currentUser()?.wins ?? 0 }}</span>
+          <span class="quick-stat__label">Victorias</span>
+        </div>
+        <div class="quick-stat">
+          <span class="quick-stat__value">{{ facade.currentUser()?.losses ?? 0 }}</span>
+          <span class="quick-stat__label">Derrotas</span>
+        </div>
+      </div>
+    </div>
+    <div class="dashboard__hero-actions">
+      <a [routerLink]="routes.MATCHMAKING" class="btn btn--primary">
+        <span>⚡</span> BUSCAR RIVAL
+      </a>
+      <a [routerLink]="routes.CHALLENGES" class="btn btn--secondary">
+        <span>🏁</span> MIS RETOS
+      </a>
+    </div>
+  </section>
+
+  <div class="dashboard__grid">
+
+    <!-- Top Pilotos -->
+    <section class="dashboard__card">
+      <div class="card-header">
+        <h2 class="card-header__title">🏆 Top Pilotos</h2>
+        <a [routerLink]="routes.MATCHMAKING" class="card-header__link">Ver todos</a>
+      </div>
+
+      @if (facade.isLoading()) {
+        <div class="skeleton-list">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="skeleton-row">
+              <srx-skeleton width="36px" height="36px" borderRadius="50%" />
+              <div class="skeleton-row__info">
+                <srx-skeleton width="120px" height="14px" />
+                <srx-skeleton width="80px" height="12px" />
+              </div>
+              <srx-skeleton width="50px" height="22px" borderRadius="20px" />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="pilot-list">
+          @for (pilot of facade.topPilots(); track pilot.id; let i = $index) {
+            <div class="pilot-row">
+              <span class="pilot-row__position" [class.pilot-row__position--top]="i < 3">
+                {{ i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i + 1) }}
+              </span>
+              <div class="pilot-row__avatar">
+                @if (pilot.avatarUrl) {
+                  <img [src]="pilot.avatarUrl" [alt]="pilot.username" />
+                } @else {
+                  <div class="pilot-row__avatar-placeholder">{{ pilot.username.charAt(0).toUpperCase() }}</div>
+                }
+              </div>
+              <div class="pilot-row__info">
+                <p class="pilot-row__name">{{ pilot.username }}</p>
+                <p class="pilot-row__city">{{ pilot.city ?? 'Sin ciudad' }}</p>
+              </div>
+              <div class="pilot-row__points">{{ pilot.points }} pts</div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Retos Recientes -->
+    <section class="dashboard__card">
+      <div class="card-header">
+        <h2 class="card-header__title">⚡ Retos Recientes</h2>
+        <a [routerLink]="routes.CHALLENGES" class="card-header__link">Ver todos</a>
+      </div>
+
+      @if (facade.isLoading()) {
+        <div class="skeleton-list">
+          @for (i of [1,2,3]; track i) {
+            <div class="skeleton-row">
+              <srx-skeleton width="32px" height="32px" borderRadius="50%" />
+              <div class="skeleton-row__info">
+                <srx-skeleton width="200px" height="14px" />
+                <srx-skeleton width="100px" height="12px" />
+              </div>
+              <srx-skeleton width="70px" height="24px" borderRadius="20px" />
+            </div>
+          }
+        </div>
+      } @else if (facade.recentChallenges().length === 0) {
+        <div class="empty-challenges">
+          <span>🏎️</span>
+          <p>Sin retos recientes. ¡Reta a alguien!</p>
+          <a [routerLink]="routes.MATCHMAKING" class="btn btn--primary btn--sm">Buscar rival</a>
+        </div>
+      } @else {
+        <div class="challenge-list">
+          @for (challenge of facade.recentChallenges(); track challenge.id) {
+            <div class="challenge-row">
+              <span class="challenge-row__icon">{{ getChallengeIcon(challenge.status) }}</span>
+              <div class="challenge-row__info">
+                <p class="challenge-row__title">
+                  {{ challenge.challengerName }} vs {{ challenge.challengedName }}
+                </p>
+                <p class="challenge-row__date">{{ challenge.createdAt | date:'dd MMM yyyy' }}</p>
+              </div>
+              <span class="challenge-row__status challenge-row__status--{{ challenge.status }}">
+                {{ challenge.status }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+  </div>
+</div>

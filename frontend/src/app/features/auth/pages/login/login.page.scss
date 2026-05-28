@@ -1,0 +1,236 @@
+.auth-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: var(--color-bg, #0a0a0f);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+
+  &__visual {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(255,50,0,0.15) 100%),
+      url('/assets/images/race-bg.svg') center/cover no-repeat;
+    min-height: 300px;
+
+    @media (max-width: 768px) {
+      display: none;
+    }
+
+    &-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,50,0,0.2), rgba(0,0,0,0.8));
+    }
+
+    &-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      height: 100%;
+      padding: 3rem;
+    }
+  }
+
+  &__tagline {
+    font-size: 3.5rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    margin: 0 0 1rem;
+    letter-spacing: -1px;
+    display: flex;
+    flex-direction: column;
+
+    .accent {
+      color: var(--color-accent, #ff3200);
+      -webkit-text-stroke: 2px var(--color-accent, #ff3200);
+    }
+  }
+
+  &__sub {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.05rem;
+    margin: 0;
+    max-width: 380px;
+    line-height: 1.5;
+  }
+
+  &__form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: var(--color-bg, #0a0a0f);
+  }
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+
+  &__logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 2.5rem;
+
+    &-icon { font-size: 1.8rem; }
+    .accent { color: var(--color-accent, #ff3200); }
+  }
+
+  &__title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 0.25rem;
+  }
+
+  &__subtitle {
+    color: var(--color-text-muted, #888);
+    margin: 0 0 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    border-radius: 8px;
+    color: #ff5555;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  &__footer {
+    margin: 1.5rem 0 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #888);
+  }
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  &--error .form-input {
+    border-color: rgba(255, 50, 50, 0.6);
+  }
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #bbb);
+  letter-spacing: 0.3px;
+}
+
+.form-input-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  outline: none;
+  box-sizing: border-box;
+
+  &::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+  &:focus {
+    border-color: var(--color-accent, #ff3200);
+    box-shadow: 0 0 0 3px rgba(255, 50, 0, 0.12);
+  }
+}
+
+.form-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+}
+
+.form-error {
+  font-size: 0.8rem;
+  color: #ff5555;
+}
+
+.auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #ff3200, #ff6600);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(255, 50, 0, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  &__spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+}
+
+.auth-link {
+  color: var(--color-accent, #ff3200);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

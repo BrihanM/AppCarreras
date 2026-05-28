@@ -29,12 +29,22 @@ import categoriesRoutes from './modules/categories/application/routes';
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:4200';
+const allowedOrigins = [CLIENT_URL, 'http://localhost:3000', 'http://localhost:4200'].filter((v, i, a) => a.indexOf(v) === i);
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // allow non-browser tools or same-origin (no origin)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
-});
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+const io = new Server(server, { cors: corsOptions });
 
 // register io globally for modules to use
 setIo(io);
@@ -47,7 +57,7 @@ setIo(io);
  *   (si hay token) para dejar `req.user` disponible.
  */
 // Middlewares
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(parseCookies);

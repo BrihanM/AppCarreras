@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import ChallengeRepositoryPg from '../../infrastructure/adapters/pg/ChallengeRepositoryPg';
 import ChallengeService from '../../domain/services/ChallengeService';
 import { createChallengeSchema, completeChallengeSchema } from '../validators/challengeSchemas';
+import { pool } from '../../infrastructure/db';
 
 const repo = new ChallengeRepositoryPg();
 const service = new ChallengeService(repo);
@@ -17,6 +18,23 @@ const create = async (req: Request, res: Response) => {
     res.status(201).json(created);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+/**
+ * list
+ * Endpoint para listar challenges con paginación simples: `?limit=&page=`
+ */
+const list = async (req: Request, res: Response) => {
+  try {
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const offset = (page - 1) * limit;
+    const q = 'SELECT * FROM challenges ORDER BY created_at DESC LIMIT $1 OFFSET $2';
+    const { rows } = await pool.query(q, [limit, offset]);
+    res.json({ success: true, message: 'Challenges listed', data: rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -63,4 +81,4 @@ const complete = async (req: Request, res: Response) => {
   }
 };
 
-export default { create, accept, reject: rejectChallenge, complete };
+export default { create, list, accept, reject: rejectChallenge, complete };

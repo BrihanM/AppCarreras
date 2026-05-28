@@ -73,7 +73,7 @@ const remove = async (req: Request, res: Response) => {
 const list = async (_req: Request, res: Response) => {
   try {
     const items = await service.listUsers();
-    res.json(items);
+    res.json({ success: true, message: 'Users listed', data: items });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

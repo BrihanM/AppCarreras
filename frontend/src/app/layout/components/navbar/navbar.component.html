@@ -1,0 +1,41 @@
+<nav class="navbar">
+  <div class="navbar__brand">
+    <button class="navbar__menu-btn" (click)="menuToggle.emit()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a class="navbar__logo" [routerLink]="routes.DASHBOARD">
+      <span class="navbar__logo-icon">🏎️</span>
+      <span class="navbar__logo-text">StreetRace<span class="accent">X</span></span>
+    </a>
+  </div>
+
+  <div class="navbar__actions">
+    <!-- Notificaciones -->
+    <a class="navbar__icon-btn" [routerLink]="routes.NOTIFICATIONS" aria-label="Notificaciones">
+      <span class="icon">🔔</span>
+      @if (unreadCount > 0) {
+        <span class="badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+      }
+    </a>
+
+    <!-- Matchmaking -->
+    <a class="navbar__icon-btn" [routerLink]="routes.MATCHMAKING" aria-label="Matchmaking">
+      <span class="icon">⚡</span>
+    </a>
+
+    <!-- Avatar usuario -->
+    <a class="navbar__avatar" [routerLink]="routes.PROFILE">
+      @if (currentUser?.avatarUrl) {
+          <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.username" />
+        } @else {
+          <div class="navbar__avatar-placeholder">
+            {{ currentUser?.username?.charAt(0)?.toUpperCase() }}
+          </div>
+        }
+    </a>
+
+    <button class="navbar__logout-btn" (click)="logout()" aria-label="Cerrar sesión">
+      <span>Salir</span>
+    </button>
+  </div>
+</nav>

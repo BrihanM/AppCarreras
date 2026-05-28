@@ -1,0 +1,57 @@
+/**
+ * @fileoverview Página de Perfil del Piloto.
+ * Muestra estadísticas del piloto y permite editar información personal.
+ */
+import { Component, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ProfileFacade } from '../facades/profile.facade';
+
+@Component({
+  selector: 'srx-profile-page',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './profile.page.html',
+  styleUrl: './profile.page.scss',
+})
+export class ProfilePage implements OnInit {
+  readonly facade = inject(ProfileFacade);
+  private readonly fb = inject(FormBuilder);
+  isEditing = false;
+
+  readonly form = this.fb.group({
+    firstName: [''],
+    lastName: [''],
+    bio: [''],
+    city: [''],
+    avatarUrl: [''],
+  });
+
+  ngOnInit(): void {
+    const user = this.facade.currentUser();
+    if (user) {
+      this.form.patchValue({
+        firstName: user.firstName ?? '',
+        lastName: user.lastName ?? '',
+        bio: user.bio ?? '',
+        city: user.city ?? '',
+        avatarUrl: user.avatarUrl ?? '',
+      });
+    }
+  }
+
+  startEditing(): void { this.isEditing = true; }
+  cancelEditing(): void { this.isEditing = false; }
+
+  submit(): void {
+    if (this.form.invalid) return;
+    this.facade.updateProfile({
+      firstName: this.form.value.firstName ?? undefined,
+      lastName: this.form.value.lastName ?? undefined,
+      bio: this.form.value.bio ?? undefined,
+      city: this.form.value.city ?? undefined,
+      avatarUrl: this.form.value.avatarUrl ?? undefined,
+    });
+    this.isEditing = false;
+  }
+}

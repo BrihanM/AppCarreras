@@ -1,0 +1,129 @@
+<div class="challenges-page">
+  <div class="page-header">
+    <h1 class="page-header__title">🏁 Mis Retos</h1>
+    <p class="page-header__sub">Timeline de carreras y retos del circuito</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.tab--active]="activeTab === 'pending'" (click)="setTab('pending')">
+      Pendientes
+      @if (facade.pendingChallenges().length > 0) {
+        <span class="tab__badge">{{ facade.pendingChallenges().length }}</span>
+      }
+    </button>
+    <button class="tab" [class.tab--active]="activeTab === 'active'" (click)="setTab('active')">
+      Activos
+      @if (facade.activeChallenges().length > 0) {
+        <span class="tab__badge tab__badge--blue">{{ facade.activeChallenges().length }}</span>
+      }
+    </button>
+    <button class="tab" [class.tab--active]="activeTab === 'history'" (click)="setTab('history')">
+      Historial
+    </button>
+  </div>
+
+  <!-- Contenido según tab -->
+  @if (facade.isLoading()) {
+    <div class="challenge-list">
+      @for (i of [1,2,3]; track i) {
+        <div class="challenge-item-skeleton">
+          <srx-skeleton width="40px" height="40px" borderRadius="50%" />
+          <div class="challenge-item-skeleton__info">
+            <srx-skeleton width="250px" height="16px" />
+            <srx-skeleton width="150px" height="12px" />
+          </div>
+          <srx-skeleton width="100px" height="34px" borderRadius="8px" />
+        </div>
+      }
+    </div>
+  } @else {
+
+    <!-- Tab: Pendientes -->
+    @if (activeTab === 'pending') {
+      @if (facade.pendingChallenges().length === 0) {
+        <srx-empty-state icon="⏳" title="Sin retos pendientes" message="No tienes retos esperando tu respuesta." />
+      } @else {
+        <div class="challenge-list">
+          @for (challenge of facade.pendingChallenges(); track challenge.id) {
+            <div class="challenge-item challenge-item--pending">
+              <div class="challenge-item__avatar">
+                {{ challenge.challengerName.charAt(0).toUpperCase() }}
+              </div>
+              <div class="challenge-item__info">
+                <p class="challenge-item__title">
+                  <strong>{{ challenge.challengerName }}</strong> te ha retado
+                </p>
+                <p class="challenge-item__date">{{ challenge.createdAt | date:'dd MMM yyyy · HH:mm' }}</p>
+              </div>
+              <div class="challenge-item__actions">
+                <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
+                  ✓ Aceptar
+                </button>
+                <button class="btn btn--danger btn--sm" (click)="facade.rejectChallenge(challenge.id)">
+                  ✕ Rechazar
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Tab: Activos -->
+    @if (activeTab === 'active') {
+      @if (facade.activeChallenges().length === 0) {
+        <srx-empty-state icon="⚡" title="Sin carreras activas" message="No tienes carreras programadas aún." />
+      } @else {
+        <div class="challenge-list">
+          @for (challenge of facade.activeChallenges(); track challenge.id) {
+            <div class="challenge-item challenge-item--active">
+              <div class="challenge-item__icon">⚡</div>
+              <div class="challenge-item__info">
+                <p class="challenge-item__title">
+                  {{ challenge.challengerName }} vs {{ challenge.challengedName }}
+                </p>
+                <p class="challenge-item__date">Aceptado · {{ challenge.createdAt | date:'dd MMM' }}</p>
+              </div>
+              <div class="challenge-item__actions">
+                <button
+                  class="btn btn--primary btn--sm"
+                  (click)="facade.completeChallenge(challenge.id, currentUserId!)"
+                >
+                  🏆 Marcar ganado
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Tab: Historial -->
+    @if (activeTab === 'history') {
+      @if (facade.completedChallenges().length === 0) {
+        <srx-empty-state icon="📋" title="Sin historial" message="Aquí aparecerán tus carreras completadas." />
+      } @else {
+        <div class="challenge-list">
+          @for (challenge of facade.completedChallenges(); track challenge.id) {
+            <div class="challenge-item" [class]="'challenge-item--' + challenge.status">
+              <div class="challenge-item__icon">
+                {{ challenge.status === 'completed' ? (isWinner(challenge.winnerId) ? '🏆' : '💀') : '❌' }}
+              </div>
+              <div class="challenge-item__info">
+                <p class="challenge-item__title">
+                  {{ challenge.challengerName }} vs {{ challenge.challengedName }}
+                </p>
+                <p class="challenge-item__date">{{ challenge.completedAt ?? challenge.createdAt | date:'dd MMM yyyy' }}</p>
+              </div>
+              <span class="challenge-status challenge-status--{{ challenge.status }}">
+                {{ challenge.status }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+    }
+
+  }
+</div>
