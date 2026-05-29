@@ -10,6 +10,7 @@ import {
   FormGroup,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { RegisterWithUserPayload } from '@shared/interfaces';
 import { AuthFacade } from '../../facades/auth.facade';
 import { APP_ROUTES } from '@core/constants/app.constants';
 
@@ -29,6 +30,13 @@ export class RegisterPage implements OnDestroy {
     username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
+
+    // Campos del empleado / user
+    name: ['', [Validators.required]],
+    local_zone: [''],
+    city_area: [''],
+    state_zone: [''],
+    country_zone: [''],
   });
 
   showPassword = false;
@@ -38,7 +46,27 @@ export class RegisterPage implements OnDestroy {
       this.form.markAllAsTouched();
       return;
     }
-    this.authFacade.register(this.form.getRawValue());
+    const values = this.form.getRawValue();
+    const payload: RegisterWithUserPayload = {
+      username: values.username,
+      email: values.email,
+      password: values.password,
+      user: {
+        name: values.name,
+        local_zone: values.local_zone || null,
+        city_area: values.city_area || null,
+        state_zone: values.state_zone || null,
+        country_zone: values.country_zone || null,
+        rank: null,
+        category_id: null,
+        victories: 0,
+        defeats: 0,
+        consecutive_challenges: 0,
+        state: 'active',
+      },
+    };
+
+    this.authFacade.register(payload);
   }
 
   togglePassword(): void { this.showPassword = !this.showPassword; }

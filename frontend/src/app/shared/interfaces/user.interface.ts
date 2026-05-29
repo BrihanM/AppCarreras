@@ -36,6 +36,33 @@ export interface RegisterPayload {
   password: string;
 }
 
+/** Payload para crear el recurso `user`/empleado vinculado a una cuenta. */
+export interface CreateUserPayload {
+  name: string;
+  local_zone?: string | null;
+  city_area?: string | null;
+  state_zone?: string | null;
+  country_zone?: string | null;
+  rank?: string | null;
+  category_id?: string | null;
+  victories?: number;
+  defeats?: number;
+  consecutive_challenges?: number;
+  state?: string;
+  account_id?: string; // se añade tras crear la cuenta
+}
+
+/** Payload combinado usado por la UI de registro que contiene credenciales y datos de empleado. */
+export interface RegisterWithUserPayload {
+  // datos para /auth/register
+  username: string;
+  email: string;
+  password: string;
+
+  // datos para /api/users
+  user: CreateUserPayload;
+}
+
 /** Tokens JWT devueltos por el backend. */
 export interface AuthTokens {
   accessToken: string;
