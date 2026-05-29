@@ -16,7 +16,8 @@ export class ProfileService {
 
   /** Obtiene el perfil del usuario autenticado. */
   getMyProfile(): Observable<ApiResponse<User>> {
-    return this.http.get<ApiResponse<User>>(`${this.base}/auth/me`);
+    // El backend expone el perfil en /users/me
+    return this.http.get<ApiResponse<User>>(`${this.base}/users/me`);
   }
 
   /**
@@ -24,6 +25,13 @@ export class ProfileService {
    * @param payload Campos a actualizar.
    */
   updateProfile(payload: UpdateProfilePayload): Observable<ApiResponse<User>> {
-    return this.http.put<ApiResponse<User>>(`${this.base}/auth/account`, payload);
+    // Usar endpoint de actualización de cuenta propia. Si el backend expone /users/me lo rechazará si no soporta PUT,
+    // pero por ahora apuntamos a /users/me para mantener consistencia con getMyProfile.
+    return this.http.put<ApiResponse<User>>(`${this.base}/users/me`, payload);
+  }
+
+  /** Actualiza la cuenta (username/email/password/avatar) del usuario autenticado */
+  updateAccount(payload: any): Observable<any> {
+    return this.http.put<any>(`${this.base}/auth/me`, payload);
   }
 }

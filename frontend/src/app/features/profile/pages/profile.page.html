@@ -52,6 +52,20 @@
       <form class="edit-form" [formGroup]="form" (ngSubmit)="submit()">
         <div class="form-row">
           <div class="form-group">
+            <label class="form-label">Usuario</label>
+            <input class="form-input" formControlName="username" placeholder="usuario" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" formControlName="email" placeholder="correo@ejemplo.com" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cambiar contraseña</label>
+          <input type="password" class="form-input" formControlName="password" placeholder="Nueva contraseña (opcional)" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label class="form-label">Nombre</label>
             <input class="form-input" formControlName="firstName" placeholder="Ej: Carlos" />
           </div>

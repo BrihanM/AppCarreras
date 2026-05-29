@@ -4,7 +4,7 @@
       <h1 class="page-header__title">🏎️ Mi Garaje</h1>
       <p class="page-header__sub">Gestiona tu flota de vehículos de carrera</p>
     </div>
-    <button class="btn btn--primary" (click)="openModal()">
+    <button class="btn btn--primary" (click)="openModal()" [disabled]="vehiclesCount >= 3">
       <span>+</span> Agregar Vehículo
     </button>
   </div>
@@ -22,7 +22,7 @@
         </div>
       }
     </div>
-  } @else if (facade.vehicles().length === 0) {
+  } @else if (vehiclesCount === 0) {
     <srx-empty-state
       icon="🚗"
       title="Sin vehículos registrados"
@@ -32,7 +32,7 @@
     </srx-empty-state>
   } @else {
     <div class="vehicles-grid">
-      @for (vehicle of facade.vehicles(); track vehicle.id) {
+      @for (vehicle of vehiclesList; track vehicle.id) {
         <div class="vehicle-card" [class.vehicle-card--active]="vehicle.isActive">
           @if (vehicle.isActive) {
             <div class="vehicle-card__active-badge">⚡ ACTIVO</div>
@@ -90,8 +90,8 @@
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Marca</label>
-            <input class="form-input" formControlName="brand" placeholder="Toyota" />
+            <label class="form-label">Marca (make)</label>
+            <input class="form-input" formControlName="make" placeholder="Toyota" />
           </div>
           <div class="form-group">
             <label class="form-label">Modelo</label>
@@ -112,8 +112,11 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Placa (opcional)</label>
-            <input class="form-input" formControlName="plate" placeholder="ABC-123" />
+            <label class="form-label">Placa (formato ASD123)</label>
+            <input class="form-input" formControlName="plate" placeholder="ASD123" />
+            @if (form.get('plate')?.invalid && (form.get('plate')?.touched || form.get('plate')?.dirty)) {
+              <p class="form-error">La placa debe tener 3 letras seguidas de 3 números (ej. ASD123).</p>
+            }
           </div>
           <div class="form-group">
             <label class="form-label">HP (opcional)</label>
@@ -123,7 +126,7 @@
 
         <div class="modal__actions">
           <button type="button" class="btn btn--secondary" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="btn btn--primary" [disabled]="facade.isSaving()">
+          <button type="submit" class="btn btn--primary" [disabled]="facade.isSaving() || form.invalid">
             {{ facade.isSaving() ? 'Guardando...' : 'Registrar Vehículo' }}
           </button>
         </div>

@@ -80,9 +80,13 @@ export class AuthService {
       .post<ApiResponse<AuthResponse>>(`${this.apiUrl}/register`, payload)
       .pipe(
         tap(({ data }) => {
-          this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
-          this.storage.set(STORAGE_KEYS.USER, data.user);
-          this._currentUser.set(data.user);
+          // El endpoint de registro puede no devolver `accessToken` (registro sin login),
+          // sólo persistimos la sesión si el servidor nos envía token + user.
+          if (data?.accessToken && data?.user) {
+            this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+            this.storage.set(STORAGE_KEYS.USER, data.user);
+            this._currentUser.set(data.user);
+          }
         })
       );
   }

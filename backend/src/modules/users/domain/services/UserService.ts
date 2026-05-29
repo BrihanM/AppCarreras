@@ -23,6 +23,11 @@ class UserService {
    */
   async createUser(attrs: Partial<User>): Promise<User> {
     const id = attrs.id || uuidv4();
+    // Enforce: an account_id can only be associated to one user
+    if ((attrs as any).account_id) {
+      const existing = await (this.repo as any).findByAccountId((attrs as any).account_id);
+      if (existing) throw new Error('Account already has an associated user');
+    }
     const user = await this.repo.create({ ...attrs, id } as any);
     try {
       const io = getIo();
@@ -39,6 +44,18 @@ class UserService {
    */
   async getUser(id: string): Promise<User | null> {
     return this.repo.findById(id);
+  }
+
+  /**
+   * getByAccountId
+   * Recupera un `User` por el `account_id` (id de la cuenta/auth).
+   */
+  async getByAccountId(accountId: string): Promise<User | null> {
+    // delega al repositorio
+    if (typeof (this.repo as any).findByAccountId === 'function') {
+      return (this.repo as any).findByAccountId(accountId);
+    }
+    return null;
   }
 
   /**

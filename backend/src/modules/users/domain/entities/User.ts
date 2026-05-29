@@ -1,6 +1,8 @@
 export interface User {
   id: string;
   name: string;
+  bio?: string | null;
+  avatar_url?: string | null;
   local_zone?: string | null;
   city_area?: string | null;
   state_zone?: string | null;

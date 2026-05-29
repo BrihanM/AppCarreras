@@ -169,6 +169,26 @@
   }
 }
 
+/* Selects and options: force dark styles for dropdown menus in dark theme */
+select.form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+/* Options styling — some browsers honor this, helps keep dropdown readable */
+select.form-input option {
+  background: var(--color-bg, #0a0a0f);
+  color: #fff;
+}
+
+/* Edge / IE: hide native expand icon spacing tweaks */
+select.form-input::-ms-expand {
+  display: none;
+}
+
 .form-toggle-btn {
   position: absolute;
   right: 0.75rem;

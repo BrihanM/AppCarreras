@@ -10,6 +10,8 @@ import { finalize } from 'rxjs/operators';
 
 import { DashboardService } from '../services/dashboard.service';
 import { AuthService } from '@core/services/auth.service';
+import { ProfileService } from '@features/profile/services/profile.service';
+import { ProfileFacade } from '@features/profile/facades/profile.facade';
 import { User } from '@shared/interfaces';
 import { Challenge } from '@shared/interfaces';
 
@@ -17,6 +19,8 @@ import { Challenge } from '@shared/interfaces';
 export class DashboardFacade {
   private readonly dashboardService = inject(DashboardService);
   readonly authService = inject(AuthService);
+  private readonly profileService = inject(ProfileService);
+  private readonly profileFacade = inject(ProfileFacade);
 
   readonly isLoading = signal(false);
   readonly topPilots = signal<User[]>([]);
@@ -28,14 +32,22 @@ export class DashboardFacade {
    */
   loadDashboard(): void {
     this.isLoading.set(true);
-
     forkJoin({
+      profile: this.profileService.getMyProfile(),
       pilots: this.dashboardService.getTopPilots(10),
       challenges: this.dashboardService.getRecentChallenges(5),
     })
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: ({ pilots, challenges }) => {
+        next: ({ profile, pilots, challenges }) => {
+          // Actualiza el usuario en AuthService con el perfil más reciente
+          try {
+            const mapped = this.profileFacade.mapProfileToUser(profile.data as any);
+            this.authService.updateCurrentUser(mapped);
+          } catch (e) {
+            console.warn('[Dashboard] No se pudo actualizar currentUser:', e);
+          }
+
           this.topPilots.set(pilots.data);
           this.recentChallenges.set(challenges.data);
         },

@@ -48,7 +48,7 @@
           @for (challenge of facade.pendingChallenges(); track challenge.id) {
             <div class="challenge-item challenge-item--pending">
               <div class="challenge-item__avatar">
-                {{ challenge.challengerName.charAt(0).toUpperCase() }}
+                {{ challenge?.challengerName?.charAt(0)?.toUpperCase() }}
               </div>
               <div class="challenge-item__info">
                 <p class="challenge-item__title">

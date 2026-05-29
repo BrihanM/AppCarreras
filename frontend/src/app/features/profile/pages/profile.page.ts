@@ -20,6 +20,10 @@ export class ProfilePage implements OnInit {
   isEditing = false;
 
   readonly form = this.fb.group({
+    // Account fields
+    username: [''],
+    email: [''],
+    password: [''],
     firstName: [''],
     lastName: [''],
     bio: [''],
@@ -28,6 +32,37 @@ export class ProfilePage implements OnInit {
   });
 
   ngOnInit(): void {
+    // Solicita el perfil al backend y parchea el formulario cuando llegue.
+    this.facade.loadProfile().subscribe({
+      next: ({ data }) => {
+        this.form.patchValue({
+          username: data.username ?? '',
+          email: data.email ?? '',
+          firstName: data.firstName ?? '',
+          lastName: data.lastName ?? '',
+          bio: data.bio ?? '',
+          city: data.city ?? '',
+          avatarUrl: data.avatarUrl ?? '',
+        });
+      },
+      error: () => {
+        const user = this.facade.currentUser();
+        if (user) {
+          this.form.patchValue({
+            username: user.username ?? '',
+            email: user.email ?? '',
+            firstName: user.firstName ?? '',
+            lastName: user.lastName ?? '',
+            bio: user.bio ?? '',
+            city: user.city ?? '',
+            avatarUrl: user.avatarUrl ?? '',
+          });
+        }
+      },
+    });
+  }
+
+  startEditing(): void {
     const user = this.facade.currentUser();
     if (user) {
       this.form.patchValue({
@@ -38,14 +73,17 @@ export class ProfilePage implements OnInit {
         avatarUrl: user.avatarUrl ?? '',
       });
     }
+    this.isEditing = true;
   }
 
-  startEditing(): void { this.isEditing = true; }
   cancelEditing(): void { this.isEditing = false; }
 
   submit(): void {
     if (this.form.invalid) return;
     this.facade.updateProfile({
+      username: this.form.value.username ?? undefined,
+      email: this.form.value.email ?? undefined,
+      password: this.form.value.password ?? undefined,
       firstName: this.form.value.firstName ?? undefined,
       lastName: this.form.value.lastName ?? undefined,
       bio: this.form.value.bio ?? undefined,

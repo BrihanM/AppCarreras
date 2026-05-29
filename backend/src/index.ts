@@ -10,6 +10,7 @@ import { setIo } from './socket';
 import { connectDB } from './config/db';
 import authRoutes from './modules/auth/application/routes';
 import usersRoutes from './modules/users/application/routes';
+import { runMigrations } from './scripts/runMigrations';
 import vehiclesRoutes from './modules/vehicles/application/routes';
 import challengesRoutes from './modules/challenges/application/routes';
 import notificationsRoutes from './modules/notifications/application/routes';
@@ -144,13 +145,22 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 4000;
 
 // Connectar a la base de datos y iniciar el servidor
-connectDB().then(() => {
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}).catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+const start = async () => {
+  try {
+    await connectDB();
+    const auto = process.env.AUTO_MIGRATE === 'true';
+    if (auto) {
+      console.log('AUTO_MIGRATE enabled: running migrations before start');
+      await runMigrations();
+    }
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
 
+start();
 export { io };

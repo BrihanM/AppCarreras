@@ -35,7 +35,7 @@ import { EmptyStateComponent } from '../../../../shared/components/ui/empty-stat
         <div class="list">
           @for (user of users(); track user.id) {
             <div class="user-row">
-              <div class="user-row__avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
+              <div class="user-row__avatar">{{ user?.username?.charAt(0)?.toUpperCase() }}</div>
               <div class="user-row__info">
                 <p class="user-row__name">{{ user.username }}</p>
                 <p class="user-row__email">{{ user.email }} · {{ user.role }}</p>

@@ -76,7 +76,16 @@ export interface AuthResponse {
 }
 
 /** Payload para actualizar el perfil del usuario autenticado. */
-export interface UpdateProfilePayload {
+/** Payload to update the authenticated account (username/email/password/photo) */
+export interface UpdateAccountPayload {
+  username?: string;
+  email?: string;
+  password?: string;
+  avatarUrl?: string;
+}
+
+/** Payload para actualizar el perfil del usuario autenticado. Incluye opcionalmente campos de cuenta. */
+export interface UpdateProfilePayload extends UpdateAccountPayload {
   firstName?: string;
   lastName?: string;
   bio?: string;

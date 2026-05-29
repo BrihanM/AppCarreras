@@ -6,6 +6,8 @@ import { z } from 'zod';
  */
 export const createUserSchema = z.object({
   name: z.string().min(1).max(150),
+  bio: z.string().optional(),
+  avatar_url: z.string().optional(),
   local_zone: z.string().optional(),
   city_area: z.string().optional(),
   state_zone: z.string().optional(),

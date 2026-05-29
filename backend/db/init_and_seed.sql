@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(150) NOT NULL,
+  bio TEXT,
+  avatar_url TEXT,
   local_zone VARCHAR(150),
   city_area VARCHAR(150),
   state_zone VARCHAR(150),

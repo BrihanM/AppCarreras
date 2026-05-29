@@ -71,29 +71,25 @@ export class AuthFacade {
     this.isLoading.set(true);
     this.error.set(null);
 
-    const accountPayload: RegisterPayload = {
+    // Enviar payload combinado al endpoint `/auth/register` que ahora
+    // crea account + user de forma atómica en el servidor.
+    const combined = {
       username: payload.username,
       email: payload.email,
       password: payload.password,
-    };
+      user: payload.user,
+    } as any;
 
     this.authService
-      .register(accountPayload)
-      .pipe(
-        concatMap((res) => {
-          const accountId = res.data.user.id as string;
-          const userPayload = { ...payload.user, account_id: accountId };
-          return this.usersService.createUser(userPayload).pipe(map(() => res));
-        }),
-        finalize(() => this.isLoading.set(false))
-      )
+      .register(combined)
+      .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: () => {
-          this.toastService.success('¡Cuenta y perfil creados! Bienvenido a StreetRaceX.');
-          this.router.navigate([APP_ROUTES.DASHBOARD]);
+          this.toastService.success('Cuenta creada correctamente. Por favor inicia sesión.');
+          this.router.navigate([APP_ROUTES.AUTH.LOGIN]);
         },
         error: (err) => {
-          const msg = err.friendlyMessage ?? 'Error al crear cuenta o perfil.';
+          const msg = err.friendlyMessage ?? 'Error al crear la cuenta.';
           this.error.set(msg);
           this.toastService.error(msg);
         },

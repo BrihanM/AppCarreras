@@ -12,6 +12,7 @@ import { EmptyStateComponent } from '../../../shared/components/ui/empty-state/e
 import { ChallengesService } from '../../challenges/services/challenges.service';
 import { ToastService } from '@core/services/toast.service';
 import { User } from '@shared/interfaces';
+import { ChallengeStatus } from '@shared/enums/app.enums';
 
 @Component({
   selector: 'srx-matchmaking-page',
@@ -27,9 +28,23 @@ export class MatchmakingPage implements OnInit {
 
   cityFilter = '';
   challengedIds = new Set<string>();
+  activeOpponentIds = new Set<string>();
 
   ngOnInit(): void {
     this.facade.loadPilots();
+    // Load my active challenges to disable challenge button for existing active opponents
+    this.challengesService.getMyChallenges().subscribe({
+      next: (res) => {
+        const currentId = this.facade.authService.currentUser()?.id;
+        (res.data || []).forEach((c: any) => {
+          if (c.state === 'pending' || c.state === 'accepted') {
+            const other = c.challengerId === currentId ? c.challengedId : c.challengerId;
+            if (other) this.activeOpponentIds.add(other);
+          }
+        });
+      },
+      error: () => {},
+    });
   }
 
   applyFilter(): void {
@@ -41,11 +56,18 @@ export class MatchmakingPage implements OnInit {
    * @param pilot Piloto a retar.
    */
   challengePilot(pilot: User): void {
-    if (this.challengedIds.has(pilot.id)) return;
+    const current = this.facade.authService.currentUser();
+    if (!current) { this.toastService.error('Usuario no autenticado'); return; }
+    if (pilot.id === current.id) { this.toastService.error('No puedes retarte a ti mismo'); return; }
+    if ((pilot.rank || '') !== String(current.rank || '')) { this.toastService.error('Solo puedes retar a pilotos de tu mismo rank'); return; }
+    if (this.activeOpponentIds.has(pilot.id) || this.challengedIds.has(pilot.id)) { this.toastService.error('Ya existe un reto activo con este piloto'); return; }
 
     this.challengedIds.add(pilot.id);
     this.challengesService.createChallenge({ challengedId: pilot.id }).subscribe({
-      next: () => this.toastService.success(`¡Reto enviado a ${pilot.username}!`),
+      next: () => {
+        this.toastService.success(`¡Reto enviado a ${pilot.username}!`);
+        this.activeOpponentIds.add(pilot.id);
+      },
       error: () => {
         this.challengedIds.delete(pilot.id);
         this.toastService.error('Error al enviar el reto.');

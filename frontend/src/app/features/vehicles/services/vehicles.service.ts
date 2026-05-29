@@ -4,22 +4,26 @@
  *
  * @class VehiclesService
  */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { environment } from '@environments/environment';
 import { ApiResponse, PaginatedResponse } from '@shared/interfaces';
 import { Vehicle, VehiclePayload } from '@shared/interfaces';
+import { AuthService } from '@core/services/auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class VehiclesService {
-  private readonly base = `${environment.apiUrl}/vehicles`;
+  private readonly api = environment.apiUrl;
+  private readonly auth = inject(AuthService);
 
   constructor(private readonly http: HttpClient) {}
 
   /** Lista todos los vehículos del usuario autenticado. */
   getMyVehicles(): Observable<PaginatedResponse<Vehicle>> {
-    return this.http.get<PaginatedResponse<Vehicle>>(this.base);
+    const id = this.auth.currentUser()?.id;
+    if (!id) return of({ data: [], total: 0 } as any);
+    return this.http.get<PaginatedResponse<Vehicle>>(`${this.api}/users/${id}/vehicles`);
   }
 
   /**
@@ -27,7 +31,14 @@ export class VehiclesService {
    * @param payload Datos del vehículo.
    */
   createVehicle(payload: VehiclePayload): Observable<ApiResponse<Vehicle>> {
-    return this.http.post<ApiResponse<Vehicle>>(this.base, payload);
+    const id = this.auth.currentUser()?.id;
+    const backendPayload = {
+      make: (payload as any).make || payload.brand,
+      model: payload.model,
+      plate: payload.plate ?? 'N/A',
+      active: false,
+    } as any;
+    return this.http.post<ApiResponse<Vehicle>>(`${this.api}/users/${id}/vehicles`, backendPayload);
   }
 
   /**
@@ -36,7 +47,7 @@ export class VehiclesService {
    * @param payload Datos actualizados.
    */
   updateVehicle(id: string, payload: Partial<VehiclePayload>): Observable<ApiResponse<Vehicle>> {
-    return this.http.put<ApiResponse<Vehicle>>(`${this.base}/${id}`, payload);
+    return this.http.put<ApiResponse<Vehicle>>(`${this.api}/vehicles/${id}`, payload);
   }
 
   /**
@@ -44,7 +55,7 @@ export class VehiclesService {
    * @param id ID del vehículo.
    */
   deleteVehicle(id: string): Observable<ApiResponse<void>> {
-    return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`);
+    return this.http.delete<ApiResponse<void>>(`${this.api}/vehicles/${id}`);
   }
 
   /**
@@ -52,6 +63,6 @@ export class VehiclesService {
    * @param id ID del vehículo a activar.
    */
   activateVehicle(id: string): Observable<ApiResponse<Vehicle>> {
-    return this.http.patch<ApiResponse<Vehicle>>(`${this.base}/${id}/activate`, {});
+    return this.http.patch<ApiResponse<Vehicle>>(`${this.api}/vehicles/${id}/activate`, {});
   }
 }

@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import UserRepositoryPg from '../../infrastructure/adapters/pg/UserRepositoryPg';
 import UserService from '../../domain/services/UserService';
 import { createUserSchema, updateUserSchema } from '../validators/userSchemas';
+import { pool } from '../../../../config/db';
+import bcrypt from 'bcrypt';
 
 const repo = new UserRepositoryPg();
 const service = new UserService(repo);
@@ -53,6 +55,104 @@ const update = async (req: Request, res: Response) => {
 };
 
 /**
+ * updateMe
+ * Actualiza el usuario vinculado a la cuenta autenticada.
+ */
+const updateMe = async (req: Request, res: Response) => {
+  try {
+    const auth = (req as any).user;
+    if (!auth || !auth.id) return res.status(401).json({ error: 'Unauthorized' });
+    // Map frontend payload (camelCase) to DB shape (snake_case)
+    const body = { ...req.body } as any;
+    if (body.firstName || body.lastName) {
+      const first = body.firstName ?? '';
+      const last = body.lastName ?? '';
+      body.name = `${String(first).trim()} ${String(last).trim()}`.trim();
+    }
+    if (body.city) body.city_area = body.city;
+    if (body.avatarUrl) body.avatar_url = body.avatarUrl;
+    if (body.bio) body.bio = body.bio;
+
+    // If account fields are present (username/email/password/photo), perform a single transaction
+    const accountFields: any = {};
+    if (typeof body.username !== 'undefined') accountFields.username = body.username;
+    if (typeof body.email !== 'undefined') accountFields.email = body.email;
+    if (typeof body.password !== 'undefined') accountFields.password = body.password;
+    if (typeof body.avatarUrl !== 'undefined') accountFields.photo = body.avatarUrl;
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Update account if needed
+      let accountUpdated: any = null;
+      if (Object.keys(accountFields).length) {
+        const updates: string[] = [];
+        const values: any[] = [];
+        let idx = 1;
+        if (accountFields.username) { updates.push(`username=$${idx++}`); values.push(accountFields.username); }
+        if (accountFields.email) { updates.push(`email=$${idx++}`); values.push(accountFields.email); }
+        if (accountFields.password) { const hashed = await bcrypt.hash(accountFields.password, 10); updates.push(`password_hash=$${idx++}`); values.push(hashed); }
+        if (accountFields.photo) { updates.push(`photo=$${idx++}`); values.push(accountFields.photo); }
+        if (updates.length) {
+          const q = `UPDATE accounts SET ${updates.join(',')}, updated_at=NOW() WHERE id=$${idx} RETURNING *`;
+          values.push(String(auth.id));
+          const { rows } = await client.query(q, values);
+          accountUpdated = rows[0];
+        }
+      }
+
+      // Update user profile
+      const parsed = updateUserSchema.parse(body);
+      const existing = await service.getByAccountId(String(auth.id));
+      if (!existing) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Build update for users table using parsed fields
+      const userUpdates: string[] = [];
+      const userValues: any[] = [];
+      let ui = 1;
+      if (typeof parsed.name !== 'undefined') { userUpdates.push(`name=$${ui++}`); userValues.push(parsed.name); }
+      if (typeof parsed.bio !== 'undefined') { userUpdates.push(`bio=$${ui++}`); userValues.push(parsed.bio); }
+      if (typeof parsed.avatar_url !== 'undefined') { userUpdates.push(`avatar_url=$${ui++}`); userValues.push(parsed.avatar_url); }
+      if (typeof parsed.local_zone !== 'undefined') { userUpdates.push(`local_zone=$${ui++}`); userValues.push(parsed.local_zone); }
+      if (typeof parsed.city_area !== 'undefined') { userUpdates.push(`city_area=$${ui++}`); userValues.push(parsed.city_area); }
+      if (typeof parsed.state_zone !== 'undefined') { userUpdates.push(`state_zone=$${ui++}`); userValues.push(parsed.state_zone); }
+      if (typeof parsed.country_zone !== 'undefined') { userUpdates.push(`country_zone=$${ui++}`); userValues.push(parsed.country_zone); }
+      if (typeof parsed.rank !== 'undefined') { userUpdates.push(`rank=$${ui++}`); userValues.push(parsed.rank); }
+      if (typeof parsed.category_id !== 'undefined') { userUpdates.push(`category_id=$${ui++}`); userValues.push(parsed.category_id); }
+      if (typeof parsed.victories !== 'undefined') { userUpdates.push(`victories=$${ui++}`); userValues.push(parsed.victories); }
+      if (typeof parsed.defeats !== 'undefined') { userUpdates.push(`defeats=$${ui++}`); userValues.push(parsed.defeats); }
+      if (typeof parsed.consecutive_challenges !== 'undefined') { userUpdates.push(`consecutive_challenges=$${ui++}`); userValues.push(parsed.consecutive_challenges); }
+      if (typeof parsed.state !== 'undefined') { userUpdates.push(`state=$${ui++}`); userValues.push(parsed.state); }
+
+      let userUpdated: any = null;
+      if (userUpdates.length) {
+        const uq = `UPDATE users SET ${userUpdates.join(',')}, updated_at=NOW() WHERE account_id=$${ui} RETURNING *`;
+        userValues.push(String(auth.id));
+        const { rows: ur } = await client.query(uq, userValues);
+        userUpdated = ur[0];
+      }
+
+      await client.query('COMMIT');
+
+      // Merge response: prefer updated user row, and updated account if any
+      const result = { account: accountUpdated, user: userUpdated };
+      res.json({ success: true, message: 'Profile updated', data: result });
+    } catch (err: any) {
+      try { await client.query('ROLLBACK'); } catch (e) {}
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+/**
  * remove
  * Elimina un `User` por id. Responde 204 en caso de éxito.
  */
@@ -79,4 +179,20 @@ const list = async (_req: Request, res: Response) => {
   }
 };
 
-export default { create, getById, update, remove, list };
+/**
+ * getMe
+ * Devuelve el `User` vinculado a la cuenta autenticada (req.user.id).
+ */
+const getMe = async (req: Request, res: Response) => {
+  try {
+    const auth = (req as any).user;
+    if (!auth || !auth.id) return res.status(401).json({ error: 'Unauthorized' });
+    const user = await service.getByAccountId(String(auth.id));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true, message: 'User profile', data: user });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export default { create, getById, update, remove, list, getMe, updateMe };

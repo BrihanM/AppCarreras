@@ -26,7 +26,26 @@ export class VehiclesFacade {
     this.vehiclesService.getMyVehicles()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (res) => this.vehicles.set(res.data),
+        next: (res) => {
+          // Normalize backend fields -> frontend `Vehicle` shape
+          const list = (res.data || []).map((raw: any) => {
+            const v: any = raw || {};
+            return ({
+              id: v.id,
+              userId: v.user_id || v.userId,
+              brand: v.make || v.brand,
+              model: v.model,
+              year: v.year || new Date().getFullYear(),
+              color: v.color || 'unknown',
+              plate: v.plate,
+              imageUrl: v.image_url || v.imageUrl,
+              isActive: !!v.active,
+              horsepower: v.horsepower,
+              createdAt: v.created_at || v.createdAt,
+            } as Vehicle);
+          });
+          this.vehicles.set(list);
+        },
         error: () => this.toastService.error('Error cargando vehículos.'),
       });
   }
@@ -36,12 +55,32 @@ export class VehiclesFacade {
    * @param payload Datos del vehículo.
    */
   createVehicle(payload: VehiclePayload): void {
+    // Prevent creating more than 3 vehicles on client side (defensive)
+    const current = this.vehicles() || [];
+    if (current.length >= 3) {
+      this.toastService.error('Ya tienes el máximo de 3 vehículos registrados');
+      return;
+    }
     this.isSaving.set(true);
     this.vehiclesService.createVehicle(payload)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: ({ data }) => {
-          this.vehicles.update((list) => [...list, data]);
+          const raw: any = data || {};
+          const normalized: Vehicle = {
+            id: raw.id,
+            userId: raw.user_id || raw.userId,
+            brand: raw.make || raw.brand,
+            model: raw.model,
+            year: raw.year || new Date().getFullYear(),
+            color: raw.color || 'unknown',
+            plate: raw.plate,
+            imageUrl: raw.image_url || raw.imageUrl,
+            isActive: !!raw.active,
+            horsepower: raw.horsepower,
+            createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
+          };
+          this.vehicles.update((list) => [...(list || []), normalized]);
           this.toastService.success('Vehículo registrado. ¡Listo para correr!');
         },
         error: () => this.toastService.error('Error al registrar el vehículo.'),

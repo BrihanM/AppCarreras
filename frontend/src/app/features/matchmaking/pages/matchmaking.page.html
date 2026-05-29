@@ -43,7 +43,7 @@
               <img [src]="pilot.avatarUrl" [alt]="pilot.username" />
             } @else {
               <div class="pilot-card__avatar-placeholder">
-                {{ pilot.username.charAt(0).toUpperCase() }}
+                {{ pilot?.username?.charAt(0)?.toUpperCase() }}
               </div>
             }
           </div>
@@ -68,11 +68,15 @@
           <!-- Acción -->
           <button
             class="pilot-card__challenge-btn"
-            [disabled]="challengedIds.has(pilot.id)"
+            [disabled]="challengedIds.has(pilot.id) || activeOpponentIds.has(pilot.id) || (pilot.rank !== facade.authService.currentUser()?.rank)"
             (click)="challengePilot(pilot)"
           >
             @if (challengedIds.has(pilot.id)) {
               ✓ RETO ENVIADO
+            } @else if (activeOpponentIds.has(pilot.id)) {
+              ⏳ RETO ACTIVO
+            } @else if (pilot.rank !== facade.authService.currentUser()?.rank) {
+              — MISMO RANK REQUERIDO
             } @else {
               ⚡ RETAR
             }

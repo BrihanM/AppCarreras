@@ -11,11 +11,13 @@ class UserRepositoryPg implements IUserRepository {
    * Inserta un nuevo usuario.
    */
   async create(user: Partial<User>): Promise<User> {
-    const q = `INSERT INTO users (id, name, local_zone, city_area, state_zone, country_zone, rank, category_id, victories, defeats, consecutive_challenges, state, account_id)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`;
+    const q = `INSERT INTO users (id, name, bio, avatar_url, local_zone, city_area, state_zone, country_zone, rank, category_id, victories, defeats, consecutive_challenges, state, account_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`;
     const values = [
       user.id,
       user.name,
+      (user as any).bio || null,
+      (user as any).avatar_url || null,
       user.local_zone || null,
       user.city_area || null,
       user.state_zone || null,
@@ -67,9 +69,11 @@ class UserRepositoryPg implements IUserRepository {
     const existing = await this.findById(id);
     if (!existing) throw new Error('User not found');
     const updated = { ...existing, ...attrs } as any;
-    const q = `UPDATE users SET name=$1,local_zone=$2,city_area=$3,state_zone=$4,country_zone=$5,rank=$6,category_id=$7,victories=$8,defeats=$9,consecutive_challenges=$10,state=$11,account_id=$12,updated_at=NOW() WHERE id=$13 RETURNING *`;
+    const q = `UPDATE users SET name=$1,bio=$2,avatar_url=$3,local_zone=$4,city_area=$5,state_zone=$6,country_zone=$7,rank=$8,category_id=$9,victories=$10,defeats=$11,consecutive_challenges=$12,state=$13,account_id=$14,updated_at=NOW() WHERE id=$15 RETURNING *`;
     const values = [
       updated.name,
+      (updated as any).bio ?? null,
+      (updated as any).avatar_url ?? null,
       updated.local_zone,
       updated.city_area,
       updated.state_zone,

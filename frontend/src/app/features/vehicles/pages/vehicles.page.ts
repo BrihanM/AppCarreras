@@ -25,16 +25,25 @@ export class VehiclesPage implements OnInit {
   showCreateModal = false;
 
   readonly form = this.fb.group({
-    brand: ['', [Validators.required]],
+    make: ['', [Validators.required]],
     model: ['', [Validators.required]],
     year: [new Date().getFullYear(), [Validators.required, Validators.min(1950), Validators.max(new Date().getFullYear() + 1)]],
     color: ['', [Validators.required]],
-    plate: [''],
+    plate: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{3}\d{3}$/)]],
     horsepower: [null as number | null],
   });
 
   ngOnInit(): void {
     this.facade.loadVehicles();
+  }
+
+  // Safe accessors for template to avoid reading properties of undefined
+  get vehiclesCount(): number {
+    try { return this.facade.vehicles()?.length ?? 0; } catch { return 0; }
+  }
+
+  get vehiclesList() {
+    try { return this.facade.vehicles() || []; } catch { return []; }
   }
 
   submit(): void {
@@ -44,11 +53,11 @@ export class VehiclesPage implements OnInit {
     }
     const raw = this.form.getRawValue();
     const payload: VehiclePayload = {
-      brand: raw.brand!,
+      brand: raw.make!, // align form (make) with backend `make` by mapping to `brand` for existing types
       model: raw.model!,
       year: raw.year!,
       color: raw.color!,
-      plate: raw.plate || undefined,
+      plate: (raw.plate || '').toUpperCase() || undefined,
       horsepower: raw.horsepower || undefined,
     };
     this.facade.createVehicle(payload);

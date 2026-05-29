@@ -2,27 +2,39 @@
 
   <!-- Hero bienvenida -->
   <section class="dashboard__hero">
-    <div class="dashboard__hero-content">
-      <p class="dashboard__greeting">Bienvenido de vuelta, piloto</p>
-      <h1 class="dashboard__name">
-        {{ facade.currentUser()?.username }}
-        <span class="dashboard__rank-badge">Rank #{{ facade.currentUser()?.rank }}</span>
-      </h1>
-      <div class="dashboard__quick-stats">
-        <div class="quick-stat">
-          <span class="quick-stat__value">{{ facade.currentUser()?.points ?? 0 }}</span>
-          <span class="quick-stat__label">Puntos</span>
-        </div>
-        <div class="quick-stat">
-          <span class="quick-stat__value">{{ facade.currentUser()?.wins ?? 0 }}</span>
-          <span class="quick-stat__label">Victorias</span>
-        </div>
-        <div class="quick-stat">
-          <span class="quick-stat__value">{{ facade.currentUser()?.losses ?? 0 }}</span>
-          <span class="quick-stat__label">Derrotas</span>
+    @if (facade.isLoading()) {
+      <div class="dashboard__hero-content">
+        <srx-skeleton width="220px" height="28px" />
+        <div style="height:12px"></div>
+        <div class="dashboard__quick-stats">
+          <srx-skeleton width="80px" height="28px" />
+          <srx-skeleton width="80px" height="28px" />
+          <srx-skeleton width="80px" height="28px" />
         </div>
       </div>
-    </div>
+    } @else {
+      <div class="dashboard__hero-content">
+        <p class="dashboard__greeting">Bienvenido de vuelta, piloto</p>
+        <h1 class="dashboard__name">
+          {{ facade.currentUser()?.username }}
+          <span class="dashboard__rank-badge">Rank #{{ facade.currentUser()?.rank }}</span>
+        </h1>
+        <div class="dashboard__quick-stats">
+          <div class="quick-stat">
+            <span class="quick-stat__value">{{ facade.currentUser()?.points ?? 0 }}</span>
+            <span class="quick-stat__label">Puntos</span>
+          </div>
+          <div class="quick-stat">
+            <span class="quick-stat__value">{{ facade.currentUser()?.wins ?? 0 }}</span>
+            <span class="quick-stat__label">Victorias</span>
+          </div>
+          <div class="quick-stat">
+            <span class="quick-stat__value">{{ facade.currentUser()?.losses ?? 0 }}</span>
+            <span class="quick-stat__label">Derrotas</span>
+          </div>
+        </div>
+      </div>
+    }
     <div class="dashboard__hero-actions">
       <a [routerLink]="routes.MATCHMAKING" class="btn btn--primary">
         <span>⚡</span> BUSCAR RIVAL
@@ -66,7 +78,7 @@
                 @if (pilot.avatarUrl) {
                   <img [src]="pilot.avatarUrl" [alt]="pilot.username" />
                 } @else {
-                  <div class="pilot-row__avatar-placeholder">{{ pilot.username.charAt(0).toUpperCase() }}</div>
+                  <div class="pilot-row__avatar-placeholder">{{ pilot?.username?.charAt(0)?.toUpperCase() }}</div>
                 }
               </div>
               <div class="pilot-row__info">

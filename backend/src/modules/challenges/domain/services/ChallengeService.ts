@@ -147,11 +147,34 @@ class ChallengeService {
     const winner = await userRepo.findById(winner_id);
     const loserId = winner_id === challenge.challenger_id ? challenge.challenged_id : challenge.challenger_id;
     const loser = await userRepo.findById(loserId!);
+    let updatedWinner: any = null;
+    let updatedLoser: any = null;
     if (winner) {
-      await userRepo.update(winner.id, { victories: (winner.victories || 0) + 1, consecutive_challenges: (winner.consecutive_challenges || 0) + 1 } as any);
+      updatedWinner = await userRepo.update(winner.id, { victories: (winner.victories || 0) + 1, consecutive_challenges: (winner.consecutive_challenges || 0) + 1 } as any);
     }
     if (loser) {
-      await userRepo.update(loser.id, { defeats: (loser.defeats || 0) + 1, consecutive_challenges: 0 } as any);
+      updatedLoser = await userRepo.update(loser.id, { defeats: (loser.defeats || 0) + 1, consecutive_challenges: 0 } as any);
+    }
+
+    // Rank promotion logic: promote if user has 3 consecutive wins
+    try {
+      const RANKS = ['D', 'C', 'B', 'A']; // ascending order
+      if (updatedWinner) {
+        const curr = String(updatedWinner.rank || 'D');
+        const idx = RANKS.indexOf(curr);
+        const consec = Number(updatedWinner.consecutive_challenges || 0);
+        if (idx >= 0 && idx < RANKS.length - 1 && consec >= 3) {
+          const newRank = RANKS[idx + 1];
+          await userRepo.update(updatedWinner.id, { rank: newRank, consecutive_challenges: 0 } as any);
+          // notify rank change
+          const notifRepo = new NotificationRepositoryPg();
+          await notifRepo.create({ user_id: updatedWinner.id, type: 'rank_updated', message: `Congratulations! You have been promoted to rank ${newRank}`, reference_id: updated.id } as any);
+          try { const io = getIo(); if (io) io.to(`user:${updatedWinner.id}`).emit('rank:updated', { userId: updatedWinner.id, rank: newRank }); } catch (e) {}
+        }
+      }
+    } catch (e) {
+      // non-fatal: log and continue
+      console.error('Rank promotion error', e);
     }
 
     // Notifications

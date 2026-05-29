@@ -25,6 +25,11 @@ describe('UserService (unit)', () => {
     expect(mockRepo.create).toHaveBeenCalled();
   });
 
+  test('createUser throws when account_id already associated', async () => {
+    mockRepo.findByAccountId = jest.fn().mockResolvedValue({ id: 'u2', name: 'exists' });
+    await expect(service.createUser({ name: 'new', account_id: 'acc1' } as any)).rejects.toThrow('Account already has an associated user');
+  });
+
   test('getUser returns null when not found', async () => {
     mockRepo.findById.mockResolvedValue(null);
     const res = await service.getUser('nope');

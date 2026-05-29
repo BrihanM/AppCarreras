@@ -14,5 +14,10 @@ router.delete('/accounts/:id', accountController.remove);
 router.post('/auth/login', authController.login);
 // Registration endpoint (frontend expects /api/auth/register)
 router.post('/auth/register', accountController.create);
+// refresh and logout
+router.post('/auth/refresh', authController.refresh);
+router.post('/auth/logout', authController.logout);
+// Update own account
+router.put('/auth/me', accountController.updateMe);
 
 export default router;
