@@ -7,6 +7,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
 import { environment } from '@environments/environment';
 import { ApiResponse, PaginatedResponse } from '@shared/interfaces';
 import { Vehicle, VehiclePayload } from '@shared/interfaces';
@@ -23,7 +24,41 @@ export class VehiclesService {
   getMyVehicles(): Observable<PaginatedResponse<Vehicle>> {
     const id = this.auth.currentUser()?.id;
     if (!id) return of({ data: [], total: 0 } as any);
-    return this.http.get<PaginatedResponse<Vehicle>>(`${this.api}/users/${id}/vehicles`);
+    // First attempt: fetch vehicles by the current user's id (expected to be users.id)
+    return this.http.get<any>(`${this.api}/users/${id}/vehicles`).pipe(
+      map((res) => (Array.isArray(res) ? { data: res, total: res.length } : res)),
+      // If result is empty, try fallback: locate user by account_id and request their vehicles
+      switchMap((res: any) => {
+        const list = res?.data ?? [];
+        if (list.length) return of(res as any);
+
+        const accountId = this.auth.currentUser()?.id;
+        // Try to find the linked user row by scanning /users (limited) for matching account_id
+        const params = { params: new (window as any).URLSearchParams([['limit', '1000']]) } as any;
+        return this.http.get<any>(`${this.api}/users`, { params: { limit: '1000' } }).pipe(
+          map((uRes: any) => (uRes?.data ?? uRes) as any[]),
+          switchMap((users: any[]) => {
+            const found = (users || []).find((u: any) => String(u.account_id) === String(accountId) || String(u.id) === String(accountId));
+            if (!found) return of({ data: [], total: 0 } as any);
+            return this.http.get<any>(`${this.api}/users/${found.id}/vehicles`).pipe(
+              map((r2) => (Array.isArray(r2) ? { data: r2, total: r2.length } : r2)),
+              catchError(() => of({ data: [], total: 0 } as any))
+            );
+          }),
+          catchError(() => of({ data: [], total: 0 } as any))
+        );
+      }),
+      catchError(() => of({ data: [], total: 0 } as any))
+    );
+  }
+
+  /** Lista los vehículos de un usuario por su id. */
+  getVehiclesForUser(userId: string): Observable<PaginatedResponse<Vehicle>> {
+    if (!userId) return of({ data: [], total: 0 } as any);
+    return this.http.get<any>(`${this.api}/users/${userId}/vehicles`).pipe(
+      map((res: any) => (Array.isArray(res) ? { data: res, total: res.length } : res)),
+      catchError(() => of({ data: [], total: 0 } as any))
+    );
   }
 
   /**
@@ -38,7 +73,9 @@ export class VehiclesService {
       plate: payload.plate ?? 'N/A',
       active: false,
     } as any;
-    return this.http.post<ApiResponse<Vehicle>>(`${this.api}/users/${id}/vehicles`, backendPayload);
+    return this.http.post<any>(`${this.api}/users/${id}/vehicles`, backendPayload).pipe(
+      map((res) => ({ data: res } as ApiResponse<Vehicle>))
+    );
   }
 
   /**
@@ -63,6 +100,8 @@ export class VehiclesService {
    * @param id ID del vehículo a activar.
    */
   activateVehicle(id: string): Observable<ApiResponse<Vehicle>> {
-    return this.http.patch<ApiResponse<Vehicle>>(`${this.api}/vehicles/${id}/activate`, {});
+    return this.http.patch<any>(`${this.api}/vehicles/${id}/activate`, {}).pipe(
+      map((res) => ({ data: res } as ApiResponse<Vehicle>))
+    );
   }
 }

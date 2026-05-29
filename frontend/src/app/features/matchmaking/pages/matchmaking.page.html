@@ -33,9 +33,15 @@
       title="Sin pilotos disponibles"
       message="No hay pilotos disponibles con esos filtros. Intenta con otra ciudad."
     />
+  } @else if (!hasSameRankPilots()) {
+    <srx-empty-state
+      icon="🏁"
+      title="Sin competidores de tu mismo rank"
+      message="No hay competidores con tu mismo rank en este momento. Intenta más tarde o ajusta los filtros."
+    />
   } @else {
     <div class="pilots-grid">
-      @for (pilot of facade.pilots(); track pilot.id) {
+      @for (pilot of filteredPilots(); track pilot.id) {
         <div class="pilot-card">
           <!-- Avatar -->
           <div class="pilot-card__avatar">
@@ -68,14 +74,16 @@
           <!-- Acción -->
           <button
             class="pilot-card__challenge-btn"
-            [disabled]="challengedIds.has(pilot.id) || activeOpponentIds.has(pilot.id) || (pilot.rank !== facade.authService.currentUser()?.rank)"
+            [disabled]="isSelf(pilot) || hasChallenged(pilot) || hasActiveOpponent(pilot) || !sameRank(pilot)"
             (click)="challengePilot(pilot)"
           >
             @if (challengedIds.has(pilot.id)) {
               ✓ RETO ENVIADO
             } @else if (activeOpponentIds.has(pilot.id)) {
               ⏳ RETO ACTIVO
-            } @else if (pilot.rank !== facade.authService.currentUser()?.rank) {
+            } @else if (isSelf(pilot)) {
+              — NO PUEDES RETARTE A TI MISMO
+            } @else if (!sameRank(pilot)) {
               — MISMO RANK REQUERIDO
             } @else {
               ⚡ RETAR

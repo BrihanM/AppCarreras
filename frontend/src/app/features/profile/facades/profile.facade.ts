@@ -51,7 +51,7 @@ export class ProfileFacade {
       city: profile?.city_area ?? current.city ?? undefined,
       avatarUrl: (profile?.avatar_url ?? current.avatarUrl ?? (current as any).photo) ?? undefined,
       bio: profile?.bio ?? (current as any).bio ?? undefined,
-      rank: Number(profile?.rank ?? current.rank ?? 0),
+      rank: String(profile?.rank ?? current.rank ?? 'D'),
       points: Number((current.points ?? 0) as any),
       wins: Number(profile?.victories ?? current.wins ?? 0),
       losses: Number(profile?.defeats ?? current.losses ?? 0),

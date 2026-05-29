@@ -12,6 +12,7 @@ import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { NotificationsService } from '../services/notifications.service';
+import { AuthService } from '@core/services/auth.service';
 import { WebSocketService } from '@core/websocket/websocket.service';
 import { ToastService } from '@core/services/toast.service';
 import { Notification } from '@shared/interfaces';
@@ -22,6 +23,7 @@ export class NotificationsFacade implements OnDestroy {
   private readonly notificationsService = inject(NotificationsService);
   private readonly wsService = inject(WebSocketService);
   private readonly toastService = inject(ToastService);
+  private readonly authService = inject(AuthService);
   private wsSub?: Subscription;
 
   readonly isLoading = signal(false);
@@ -44,7 +46,14 @@ export class NotificationsFacade implements OnDestroy {
 
   loadNotifications(): void {
     this.isLoading.set(true);
-    this.notificationsService.getNotifications()
+    const userId = this.authService.currentUser()?.id;
+    if (!userId) {
+      this.isLoading.set(false);
+      this.toastService.error('Usuario no autenticado.');
+      return;
+    }
+
+    this.notificationsService.getNotifications(userId)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (res) => this.notifications.set(res.data),

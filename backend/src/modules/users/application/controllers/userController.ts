@@ -170,10 +170,35 @@ const remove = async (req: Request, res: Response) => {
  * list
  * Lista todos los usuarios.
  */
-const list = async (_req: Request, res: Response) => {
+const list = async (req: Request, res: Response) => {
   try {
-    const items = await service.listUsers();
-    res.json({ success: true, message: 'Users listed', data: items });
+    const page = parseInt(String(req.query.page || '1'), 10) || 1;
+    const limit = parseInt(String(req.query.limit || '10'), 10) || 10;
+    const city = req.query.city ? String(req.query.city) : null;
+    const rank = req.query.rank ? String(req.query.rank) : null;
+
+    const whereParts: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+    if (city) { whereParts.push(`city_area ILIKE $${idx++}`); values.push(`%${city}%`); }
+    if (rank) { whereParts.push(`rank = $${idx++}`); values.push(rank); }
+    const where = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    // Order by rank weight (A highest) then victories
+    const order = `ORDER BY CASE rank WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 0 END DESC, victories DESC`;
+
+    const offset = (page - 1) * limit;
+    const q = `SELECT * FROM users ${where} ${order} LIMIT $${idx++} OFFSET $${idx++}`;
+    values.push(limit, offset);
+
+    const { rows } = await pool.query(q, values);
+
+    // total count for pagination
+    const countQ = `SELECT COUNT(*)::int as total FROM users ${where}`;
+    const { rows: cr } = await pool.query(countQ, values.slice(0, values.length - 2));
+    const total = cr[0]?.total || rows.length;
+
+    res.json({ success: true, message: 'Users listed', data: rows, total });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

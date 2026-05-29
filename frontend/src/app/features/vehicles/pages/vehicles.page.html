@@ -49,13 +49,14 @@
 
           <!-- Info del vehículo -->
           <div class="vehicle-card__body">
-            <h3 class="vehicle-card__name">{{ vehicle.brand }} {{ vehicle.model }}</h3>
-            <p class="vehicle-card__year">{{ vehicle.year }} · {{ vehicle.color }}</p>
-            @if (vehicle.horsepower) {
-              <p class="vehicle-card__hp">⚡ {{ vehicle.horsepower }} HP</p>
-            }
+            <h3 class="vehicle-card__name">{{ vehicle.brand || '-' }} {{ vehicle.model || '' }}</h3>
             @if (vehicle.plate) {
               <p class="vehicle-card__plate">🪪 {{ vehicle.plate }}</p>
+            } @else {
+              <p class="vehicle-card__meta">{{ vehicle.year }} · {{ vehicle.color }}</p>
+            }
+            @if (vehicle.horsepower) {
+              <p class="vehicle-card__hp">⚡ {{ vehicle.horsepower }} HP</p>
             }
           </div>
 

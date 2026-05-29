@@ -18,8 +18,9 @@ export class NotificationsService {
   constructor(private readonly http: HttpClient) {}
 
   /** Lista todas las notificaciones del usuario autenticado. */
-  getNotifications(): Observable<PaginatedResponse<Notification>> {
-    return this.http.get<PaginatedResponse<Notification>>(this.base);
+  getNotifications(userId?: string): Observable<PaginatedResponse<Notification>> {
+    const url = userId ? `${this.base}?user_id=${encodeURIComponent(userId)}` : this.base;
+    return this.http.get<PaginatedResponse<Notification>>(url);
   }
 
   /**

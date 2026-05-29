@@ -13,6 +13,7 @@ import { PaginatedResponse, User } from '@shared/interfaces';
 /** Filtros de búsqueda de pilotos. */
 export interface PilotFilters {
   city?: string;
+  rank?: string;
   page?: number;
   limit?: number;
 }
@@ -30,6 +31,7 @@ export class MatchmakingService {
   getPilots(filters: PilotFilters = {}): Observable<PaginatedResponse<User>> {
     let params = new HttpParams();
     if (filters.city) params = params.set('city', filters.city);
+    if (filters.rank) params = params.set('rank', filters.rank);
     if (filters.page) params = params.set('page', filters.page);
     if (filters.limit) params = params.set('limit', filters.limit ?? 12);
     return this.http.get<PaginatedResponse<User>>(this.base, { params });

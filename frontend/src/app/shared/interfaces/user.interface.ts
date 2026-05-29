@@ -15,7 +15,7 @@ export interface User {
   bio?: string;
   city?: string;
   avatarUrl?: string;
-  rank: number;
+  rank: string;
   points: number;
   wins: number;
   losses: number;

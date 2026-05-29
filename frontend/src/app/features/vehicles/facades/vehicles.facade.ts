@@ -31,7 +31,7 @@ export class VehiclesFacade {
           const list = (res.data || []).map((raw: any) => {
             const v: any = raw || {};
             return ({
-              id: v.id,
+              id: v.id || v.vehicle_id || v._id,
               userId: v.user_id || v.userId,
               brand: v.make || v.brand,
               model: v.model,
@@ -92,6 +92,7 @@ export class VehiclesFacade {
    * @param id ID del vehículo.
    */
   activateVehicle(id: string): void {
+    if (!id) { this.toastService.error('Vehicle id missing'); return; }
     this.vehiclesService.activateVehicle(id).subscribe({
       next: ({ data }) => {
         this.vehicles.update((list) =>

@@ -61,8 +61,42 @@ export class AuthService {
       .pipe(
         tap(({ data }) => {
           this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+          // Persist the raw account returned by auth for debugging, but fetch the linked user profile
           this.storage.set(STORAGE_KEYS.USER, data.user);
-          this._currentUser.set(data.user);
+          // After login, fetch /users/me to obtain the linked `user` (profile) and map it as the active currentUser
+          this.http.get<any>(`${environment.apiUrl}/users/me`).subscribe({
+            next: (resp) => {
+              const profile = resp?.data ?? resp;
+              // Map profile similarly to ProfileFacade.mapProfileToUser
+              const [firstName, ...rest] = (profile?.name ?? '').split(' ');
+              const lastName = rest.join(' ') || undefined;
+              const accountRaw: any = data.user as any;
+              const mapped = {
+                id: profile?.id ?? accountRaw?.id,
+                username: profile?.name ?? accountRaw?.username ?? '',
+                email: accountRaw?.email ?? '',
+                role: (accountRaw?.role ?? 'user') as any,
+                status: (accountRaw?.state ?? 'active') as any,
+                firstName: firstName || undefined,
+                lastName: lastName || undefined,
+                city: profile?.city_area ?? undefined,
+                avatarUrl: profile?.avatar_url ?? accountRaw?.photo ?? undefined,
+                bio: profile?.bio ?? undefined,
+                rank: String(profile?.rank ?? 'D'),
+                points: Number(profile?.points ?? 0),
+                wins: Number(profile?.victories ?? 0),
+                losses: Number(profile?.defeats ?? 0),
+                createdAt: profile?.created_at ?? new Date().toISOString(),
+                updatedAt: profile?.updated_at ?? new Date().toISOString(),
+              } as any;
+              this.storage.set(STORAGE_KEYS.USER, mapped);
+              this._currentUser.set(mapped);
+            },
+            error: () => {
+              // Fallback to account object if profile isn't available
+              this._currentUser.set(data.user);
+            },
+          });
         })
       );
   }

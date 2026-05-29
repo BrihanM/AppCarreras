@@ -20,7 +20,7 @@ class UserRepositoryPg implements IUserRepository {
       user.city_area || null,
       user.state_zone || null,
       user.country_zone || null,
-      user.rank || null,
+      user.rank || 'D',
       user.category_id || null,
       user.victories || 0,
       user.defeats || 0,

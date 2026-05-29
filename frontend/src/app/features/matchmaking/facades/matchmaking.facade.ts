@@ -10,12 +10,14 @@ import { MatchmakingService, PilotFilters } from '../services/matchmaking.servic
 import { ToastService } from '@core/services/toast.service';
 import { AuthService } from '@core/services/auth.service';
 import { User } from '@shared/interfaces';
+import { ProfileFacade } from '@features/profile/facades/profile.facade';
 
 @Injectable({ providedIn: 'root' })
 export class MatchmakingFacade {
   private readonly matchmakingService = inject(MatchmakingService);
   private readonly toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private readonly profileFacade = inject(ProfileFacade);
 
   readonly isLoading = signal(false);
   readonly pilots = signal<User[]>([]);
@@ -25,13 +27,16 @@ export class MatchmakingFacade {
   /** Carga pilotos disponibles. */
   loadPilots(filters: PilotFilters = {}): void {
     this.isLoading.set(true);
-    this.matchmakingService.getPilots({ limit: 12, ...filters })
+    const rank = String(this.authService.currentUser()?.rank ?? undefined) as string | undefined;
+    const params: PilotFilters = { limit: 12, rank, ...(filters || {}) } as PilotFilters;
+    this.matchmakingService.getPilots(params)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (res) => {
-          // Filtrar al usuario actual de la lista
+          // Mapear cada fila del backend al shape `User` usado por la UI
           const currentId = this.authService.currentUser()?.id;
-          this.pilots.set(res.data.filter((p) => p.id !== currentId));
+          const mapped = (res.data || []).map((raw: any) => this.profileFacade.mapProfileToUser(raw));
+          this.pilots.set(mapped.filter((p) => String(p.id) !== String(currentId)));
         },
         error: () => this.toastService.error('Error cargando pilotos.'),
       });

@@ -85,7 +85,10 @@
                 <p class="pilot-row__name">{{ pilot.username }}</p>
                 <p class="pilot-row__city">{{ pilot.city ?? 'Sin ciudad' }}</p>
               </div>
-              <div class="pilot-row__points">{{ pilot.points }} pts</div>
+              <div class="pilot-row__meta">
+                <span class="pilot-row__rank">Rank: {{ pilot.rank }}</span>
+                <span class="pilot-row__wins">· {{ pilot.wins }} wins</span>
+              </div>
             </div>
           }
         </div>

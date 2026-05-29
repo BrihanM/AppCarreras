@@ -48,8 +48,12 @@ export class DashboardFacade {
             console.warn('[Dashboard] No se pudo actualizar currentUser:', e);
           }
 
-          this.topPilots.set(pilots.data);
-          this.recentChallenges.set(challenges.data);
+          // Normalizar pilotos al shape `User` usado por la UI
+          const mappedPilots = (pilots.data || []).map((p: any) => this.profileFacade.mapProfileToUser(p));
+          this.topPilots.set(mappedPilots);
+
+          // Challenges may already be in expected format; set directly
+          this.recentChallenges.set(challenges.data || []);
         },
         error: (err) => console.error('[Dashboard] Error cargando datos:', err),
       });
