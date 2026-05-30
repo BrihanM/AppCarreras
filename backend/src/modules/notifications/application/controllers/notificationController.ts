@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import NotificationRepositoryPg from '../../infrastructure/adapters/pg/NotificationRepositoryPg';
 import NotificationService from '../../domain/services/NotificationService';
 import { createNotificationSchema } from '../validators/notificationSchemas';
+import { pool } from '../../../../config/db';
 
 const repo = new NotificationRepositoryPg();
 const service = new NotificationService(repo);
@@ -66,8 +67,18 @@ const markRead = async (req: Request, res: Response) => {
  */
 const markAll = async (req: Request, res: Response) => {
   try {
-    // Prefer req.user (cookieAuth) but allow query param for scripts/tests
-    const userId = (req as any).user?.id || String(req.query.user_id || req.query.userId || '');
+    // Prefer explicit query user_id, otherwise resolve from authenticated subject.
+    let userId = String(req.query.user_id || req.query.userId || '');
+
+    if (!userId) {
+      const authId = (req as any).user?.id ? String((req as any).user.id) : '';
+      if (authId) {
+        // authId may be account_id; resolve to users.id first, fallback to authId as users.id
+        const { rows } = await pool.query('SELECT id FROM users WHERE account_id = $1 OR id = $1 LIMIT 1', [authId]);
+        userId = rows[0]?.id || authId;
+      }
+    }
+
     if (!userId) return res.status(400).json({ error: 'user_id required' });
     await service.markAllForUser(userId);
     res.json({ success: true, message: 'All notifications marked as read' });

@@ -14,6 +14,7 @@ import { STORAGE_KEYS } from '../constants/app.constants';
 export class RealtimeService {
   private readonly events = new Subject<{ type: string; payload: any }>();
   readonly events$ = this.events.asObservable();
+  private initialized = false;
 
   constructor(
     private readonly ws: WebSocketService,
@@ -23,6 +24,9 @@ export class RealtimeService {
 
   /** Inicializa listeners en el socket; llamar tras conectar WebSocket. */
   init(): void {
+    if (this.initialized) return;
+    this.initialized = true;
+
     // helper to get auth string suffix used in cache keys
     const token = this.storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN) || '';
     const auth = token ? `Bearer ${token}` : '';
@@ -33,12 +37,14 @@ export class RealtimeService {
 
     // user events
     ['user:created', 'user:updated', 'user:deleted'].forEach(listen);
+    // account events
+    ['account:created', 'account:updated', 'account:deleted'].forEach(listen);
     // challenges
     ['challenge:created', 'challenge:updated', 'challenge:completed'].forEach(listen);
     // vehicles
-    ['vehicle:activated', 'vehicle:deleted'].forEach(listen);
+    ['vehicle:activated', 'vehicle:updated', 'vehicle:deleted'].forEach(listen);
     // notifications
-    ['notification:new'].forEach(listen);
+    ['notification:new', 'notification:read', 'notification:all-read'].forEach(listen);
     // rank updates
     ['rank:updated'].forEach(listen);
     // categories etc
@@ -58,6 +64,12 @@ export class RealtimeService {
           this.cache.invalidatePrefix('/api/users', auth);
           if (payload?.id) this.cache.invalidatePrefix(`/api/users/${payload.id}`, auth);
           break;
+        case 'account:created':
+        case 'account:updated':
+        case 'account:deleted':
+          this.cache.invalidatePrefix('/api/users/me', auth);
+          this.cache.invalidatePrefix('/api/accounts', auth);
+          break;
         case 'challenge:created':
         case 'challenge:updated':
         case 'challenge:completed':
@@ -66,15 +78,23 @@ export class RealtimeService {
           if (payload?.challenged_id) this.cache.invalidatePrefix(`/api/users/${payload.challenged_id}/challenges`, auth);
           break;
         case 'vehicle:activated':
+        case 'vehicle:updated':
         case 'vehicle:deleted':
           this.cache.invalidatePrefix('/api/vehicles', auth);
           if (payload?.user_id) this.cache.invalidatePrefix(`/api/users/${payload.user_id}/vehicles`, auth);
           break;
         case 'notification:new':
+        case 'notification:read':
+        case 'notification:all-read':
           this.cache.invalidatePrefix('/api/notifications', auth);
           break;
         case 'rank:updated':
           if (payload?.userId) this.cache.invalidatePrefix(`/api/users/${payload.userId}`, auth);
+          break;
+        case 'category:created':
+        case 'category:updated':
+        case 'category:deleted':
+          this.cache.invalidatePrefix('/api/categories', auth);
           break;
         default:
           // generic invalidation for known base paths

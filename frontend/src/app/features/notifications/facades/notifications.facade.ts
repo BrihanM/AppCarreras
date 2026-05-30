@@ -27,6 +27,7 @@ export class NotificationsFacade implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private wsSub?: Subscription;
+  private initialized = false;
 
   readonly isLoading = signal(false);
   readonly notifications = signal<AppNotification[]>([]);
@@ -36,16 +37,49 @@ export class NotificationsFacade implements OnDestroy {
     () => this.notifications().filter((n) => !n.isRead).length
   );
 
+  private normalize(raw: any): AppNotification {
+    return {
+      id: raw?.id,
+      userId: raw?.userId ?? raw?.user_id ?? '',
+      type: raw?.type,
+      title: raw?.title ?? 'Notificación',
+      message: raw?.message ?? '',
+      isRead: typeof raw?.isRead === 'boolean' ? raw.isRead : !!raw?.is_read,
+      metadata: raw?.metadata,
+      createdAt: raw?.createdAt ?? raw?.created_at ?? new Date().toISOString(),
+    } as AppNotification;
+  }
+
   /** Inicializa la escucha de notificaciones en tiempo real. */
   initRealtimeNotifications(): void {
+    if (this.initialized) return;
+    this.initialized = true;
+
     this.wsSub = this.wsService
       .on<AppNotification>(SocketEvent.NotificationNew)
       .subscribe((notification: AppNotification) => {
         console.debug('[WS] received notification:new', notification);
-        this.notifications.update((list) => [notification, ...list]);
-        this.toastService.info(notification.message);
-        this.showBrowserNotification(notification);
+        const normalized = this.normalize(notification as any);
+        this.notifications.update((list) => [normalized, ...list]);
+        this.toastService.info(normalized.message);
+        this.showBrowserNotification(normalized);
       });
+
+    this.wsSub.add(
+      this.wsService.on<any>('notification:read').subscribe((payload) => {
+        const id = payload?.id;
+        if (!id) return;
+        this.notifications.update((list) =>
+          list.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        );
+      })
+    );
+
+    this.wsSub.add(
+      this.wsService.on<any>('notification:all-read').subscribe(() => {
+        this.notifications.update((list) => list.map((n) => ({ ...n, isRead: true })));
+      })
+    );
   }
 
   private showBrowserNotification(n: AppNotification): void {
@@ -80,7 +114,7 @@ export class NotificationsFacade implements OnDestroy {
     this.notificationsService.getNotifications(userId)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (res) => this.notifications.set(res.data as AppNotification[]),
+        next: (res) => this.notifications.set((res.data || []).map((n: any) => this.normalize(n))),
         error: () => this.toastService.error('Error cargando notificaciones.'),
       });
   }

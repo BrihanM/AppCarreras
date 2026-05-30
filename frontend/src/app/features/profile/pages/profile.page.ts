@@ -35,14 +35,15 @@ export class ProfilePage implements OnInit {
     // Solicita el perfil al backend y parchea el formulario cuando llegue.
     this.facade.loadProfile().subscribe({
       next: ({ data }) => {
+        const current = this.facade.currentUser();
         this.form.patchValue({
-          username: data.username ?? '',
-          email: data.email ?? '',
-          firstName: data.firstName ?? '',
-          lastName: data.lastName ?? '',
-          bio: data.bio ?? '',
-          city: data.city ?? '',
-          avatarUrl: data.avatarUrl ?? '',
+          username: current?.username ?? data.username ?? '',
+          email: current?.email ?? data.email ?? '',
+          firstName: current?.firstName ?? data.firstName ?? '',
+          lastName: current?.lastName ?? data.lastName ?? '',
+          bio: current?.bio ?? data.bio ?? '',
+          city: current?.city ?? data.city ?? '',
+          avatarUrl: current?.avatarUrl ?? data.avatarUrl ?? '',
         });
       },
       error: () => {
@@ -66,6 +67,9 @@ export class ProfilePage implements OnInit {
     const user = this.facade.currentUser();
     if (user) {
       this.form.patchValue({
+        username: user.username ?? '',
+        email: user.email ?? '',
+        password: '',
         firstName: user.firstName ?? '',
         lastName: user.lastName ?? '',
         bio: user.bio ?? '',

@@ -6,21 +6,34 @@
  */
 import { Injectable, inject, signal } from '@angular/core';
 import { finalize, tap } from 'rxjs/operators';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ProfileService } from '../services/profile.service';
 import { AuthService } from '@core/services/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { UpdateProfilePayload, User, ApiResponse } from '@shared/interfaces';
+import { RealtimeService } from '@core/services/realtime.service';
 
 @Injectable({ providedIn: 'root' })
 export class ProfileFacade {
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
+  private readonly realtime = inject(RealtimeService);
+  private realtimeSub?: Subscription;
 
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
   readonly currentUser = this.authService.currentUser;
+
+  constructor() {
+    try {
+      this.realtimeSub = this.realtime.events$.subscribe((ev) => {
+        if (['user:updated', 'account:updated', 'rank:updated'].includes(ev.type)) {
+          this.loadProfile().subscribe({ next: () => {}, error: () => {} });
+        }
+      });
+    } catch (e) {}
+  }
 
   /** Carga el perfil completo del servidor y actualiza el usuario en AuthService. */
   loadProfile(): Observable<ApiResponse<User>> {
@@ -45,7 +58,7 @@ export class ProfileFacade {
       // use the correct user UUID. Fallback to `account_id` when `id` missing.
       id: profile?.id ?? profile?.account_id ?? current.id ?? '',
       // Use profile values first; fallback to account/current values
-      username: profile?.username ?? profile?.name ?? current.username ?? '',
+      username: profile?.username ?? current.username ?? '',
       email: profile?.email ?? current.email ?? '',
       role: (profile?.role ?? current.role ?? 'user') as any,
       status: (profile?.state ?? current.status ?? 'active') as any,

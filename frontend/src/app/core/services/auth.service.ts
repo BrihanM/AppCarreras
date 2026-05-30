@@ -101,6 +101,13 @@ export class AuthService {
           this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
           // Persist the raw account returned by auth for debugging, but fetch the linked user profile
           this.storage.set(STORAGE_KEYS.USER, data.user);
+          // Set current user immediately so route guards allow navigation on first click.
+          const accountRaw: any = data.user as any;
+          this._currentUser.set({
+            ...(accountRaw || {}),
+            role: (accountRaw?.role ?? (accountRaw?.username === 'admin' ? 'admin' : 'user')) as any,
+            status: (accountRaw?.state ?? 'active') as any,
+          } as any);
           // After login, fetch /users/me to obtain the linked `user` (profile) and map it as the active currentUser
           this.http.get<any>(`${environment.apiUrl}/users/me`).subscribe({
             next: (resp) => {
@@ -108,7 +115,6 @@ export class AuthService {
               // Map profile similarly to ProfileFacade.mapProfileToUser
               const [firstName, ...rest] = (profile?.name ?? '').split(' ');
               const lastName = rest.join(' ') || undefined;
-              const accountRaw: any = data.user as any;
               const mapped = {
                 id: profile?.id ?? accountRaw?.id,
                 username: profile?.name ?? accountRaw?.username ?? '',

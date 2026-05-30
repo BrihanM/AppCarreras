@@ -59,7 +59,7 @@ export class VehiclesFacade {
     // subscribe to realtime events to refresh vehicles on relevant updates
     try {
       this.realtimeSub = this.realtime.events$.subscribe((ev) => {
-        if (['vehicle:activated','vehicle:deleted','user:updated','user:created'].includes(ev.type)) {
+        if (['vehicle:activated','vehicle:updated','vehicle:deleted','user:updated','user:created'].includes(ev.type)) {
           this.loadVehicles();
         }
       });

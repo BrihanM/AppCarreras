@@ -62,7 +62,14 @@ class NotificationService {
    * @returns {Promise<Notification>} Notificación actualizada.
    */
   async markAsRead(id: string): Promise<Notification> {
-    return this.repo.markRead(id);
+    const updated = await this.repo.markRead(id);
+    try {
+      const io = getIo();
+      if (io && updated?.user_id) io.to(`user:${updated.user_id}`).emit('notification:read', updated);
+    } catch (e) {
+      // ignore socket emission errors
+    }
+    return updated;
   }
 
   /**
@@ -70,7 +77,14 @@ class NotificationService {
    * Marca todas las notificaciones de un usuario como leídas.
    */
   async markAllForUser(userId: string): Promise<void> {
-    return this.repo.markAll(userId);
+    await this.repo.markAll(userId);
+    try {
+      const io = getIo();
+      if (io) io.to(`user:${userId}`).emit('notification:all-read', { userId });
+    } catch (e) {
+      // ignore socket emission errors
+    }
+    return;
   }
 
   /**
