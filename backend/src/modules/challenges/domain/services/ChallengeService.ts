@@ -40,10 +40,10 @@ class ChallengeService {
      * @param {Partial<Challenge>} attrs - Atributos parciales del reto.
      * @returns {Promise<Challenge>} El reto creado.
      */
-    if (!attrs.challenger_id || !attrs.challenged_id) {
-      throw new Error('Both challenger and challenged user ids are required');
+    if (!attrs.challenger_id || !attrs.challenger_vehicle_id) {
+      throw new Error('challenger_id and challenger_vehicle_id are required');
     }
-    if (attrs.challenger_id === attrs.challenged_id) {
+    if (attrs.challenged_id && attrs.challenger_id === attrs.challenged_id) {
       throw new Error('A user cannot challenge themself');
     }
     const id = attrs.id || uuidv4();
@@ -52,36 +52,50 @@ class ChallengeService {
       id,
       state: 'pending',
     };
-    // Business rule: no more than one active challenge between same users
-    const exists = await this.repo.existsActiveBetween(toCreate.challenger_id!, toCreate.challenged_id!);
-    if (exists) throw new Error('There is already an active challenge between these users');
-
-    // Business rule: only users with same rank can challenge
+    // Business rule: challenger must exist
     const userRepo = new UserRepositoryPg();
     const challenger = await userRepo.findById(toCreate.challenger_id!);
-    const challenged = await userRepo.findById(toCreate.challenged_id!);
-    if (!challenger || !challenged) throw new Error('Challenger or challenged user not found');
-    if ((challenger.rank || '') !== (challenged.rank || '')) throw new Error('Users must have the same rank to challenge');
+    if (!challenger) throw new Error('Challenger not found');
+
+    // Direct challenge: validate counterpart and rules.
+    if (toCreate.challenged_id) {
+      const challenged = await userRepo.findById(toCreate.challenged_id);
+      if (!challenged) throw new Error('Challenged user not found');
+      if ((challenger.rank || '') !== (challenged.rank || '')) throw new Error('Users must have the same rank to challenge');
+
+      // No duplicate active direct challenges between same users.
+      const exists = await this.repo.existsActiveBetween(toCreate.challenger_id!, toCreate.challenged_id);
+      if (exists) throw new Error('There is already an active challenge between these users');
+    }
 
     const created = await this.repo.create(toCreate);
 
-    // Create notification for challenged user
     const notifRepo = new NotificationRepositoryPg();
     try {
-      const createdNotif = await notifRepo.create({ user_id: toCreate.challenged_id!, type: 'challenge_sent', message: `You have been challenged by ${challenger.name}`, reference_id: created.id } as any);
-      try { const io = getIo(); if (io) io.to(`user:${toCreate.challenged_id}`).emit('notification:new', createdNotif); } catch (e) {}
-    } catch (e) {
-      console.error('[challenges] failed to create notification for challenged user', e);
-    }
-    try {
       const io = getIo();
-      if (io) io.to(`user:${toCreate.challenged_id}`).emit('challenge:created', created);
+      if (toCreate.challenged_id) {
+        // Direct challenge: notify challenged user.
+        try {
+          const createdNotif = await notifRepo.create({
+            user_id: toCreate.challenged_id,
+            type: 'challenge_sent',
+            message: `You have been challenged by ${challenger.name}`,
+            reference_id: created.id,
+          } as any);
+          if (io) io.to(`user:${toCreate.challenged_id}`).emit('notification:new', createdNotif);
+        } catch (e) {
+          console.error('[challenges] failed to create notification for challenged user', e);
+        }
+        if (io) io.to(`user:${toCreate.challenged_id}`).emit('challenge:created', created);
+      }
+      // Broadcast challenge creation for realtime feeds (open/direct).
+      if (io) io.emit('challenge:created', created);
     } catch (e) {}
 
     return created;
   }
 
-  async acceptChallenge(id: string): Promise<Challenge> {
+  async acceptChallenge(id: string, accepterId: string, challengedVehicleId?: string): Promise<Challenge> {
     /**
      * acceptChallenge
      * Acepta un reto pendiente.
@@ -95,10 +109,28 @@ class ChallengeService {
     const challenge = await this.repo.findById(id);
     if (!challenge) throw new Error('Challenge not found');
     if (challenge.state !== 'pending') throw new Error('Only pending challenges can be accepted');
-    const updated = await this.repo.update(id, { state: 'accepted' as ChallengeState });
-    // Notify challenger
+    if (!accepterId) throw new Error('accepterId is required');
+    if (accepterId === challenge.challenger_id) throw new Error('Challenger cannot accept their own challenge');
+
     const userRepo = new UserRepositoryPg();
-    const challenger = await userRepo.findById(updated.challenger_id);
+    const challenger = await userRepo.findById(challenge.challenger_id);
+    const accepter = await userRepo.findById(accepterId);
+    if (!challenger || !accepter) throw new Error('Challenge participants not found');
+    if ((challenger.rank || '') !== (accepter.rank || '')) throw new Error('Users must have the same rank to accept this challenge');
+
+    // If challenge is direct, only challenged user can accept.
+    if (challenge.challenged_id && challenge.challenged_id !== accepterId) {
+      throw new Error('Only the challenged user can accept this challenge');
+    }
+
+    const patch: any = {
+      state: 'accepted' as ChallengeState,
+      challenged_id: challenge.challenged_id || accepterId,
+    };
+    if (challengedVehicleId) patch.challenged_vehicle_id = challengedVehicleId;
+
+    const updated = await this.repo.update(id, patch);
+    // Notify challenger
     const notifRepo = new NotificationRepositoryPg();
     try {
       const createdNotif2 = await notifRepo.create({ user_id: updated.challenger_id, type: 'challenge_accepted', message: `Your challenge was accepted`, reference_id: updated.id } as any);
@@ -106,11 +138,18 @@ class ChallengeService {
     } catch (e) {
       console.error('[challenges] failed to create notification on accept', e);
     }
-    try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated); } catch (e) {}
+    try {
+      const io = getIo();
+      if (io) {
+        io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated);
+        if (updated.challenged_id) io.to(`user:${updated.challenged_id}`).emit('challenge:updated', updated);
+        io.emit('challenge:updated', updated);
+      }
+    } catch (e) {}
     return updated;
   }
 
-  async rejectChallenge(id: string): Promise<Challenge> {
+  async rejectChallenge(id: string, rejectorId?: string): Promise<Challenge> {
     /**
      * rejectChallenge
      * Rechaza un reto pendiente.
@@ -123,6 +162,9 @@ class ChallengeService {
     const challenge = await this.repo.findById(id);
     if (!challenge) throw new Error('Challenge not found');
     if (challenge.state !== 'pending') throw new Error('Only pending challenges can be rejected');
+    if (rejectorId && challenge.challenged_id && challenge.challenged_id !== rejectorId) {
+      throw new Error('Only the challenged user can reject this challenge');
+    }
     const updated = await this.repo.update(id, { state: 'rejected' as ChallengeState });
     const notifRepo = new NotificationRepositoryPg();
     try {
@@ -131,7 +173,14 @@ class ChallengeService {
     } catch (e) {
       console.error('[challenges] failed to create notification on reject', e);
     }
-    try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated); } catch (e) {}
+    try {
+      const io = getIo();
+      if (io) {
+        io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated);
+        if (updated.challenged_id) io.to(`user:${updated.challenged_id}`).emit('challenge:updated', updated);
+        io.emit('challenge:updated', updated);
+      }
+    } catch (e) {}
     return updated;
   }
 

@@ -51,18 +51,36 @@
                 {{ challenge?.challengerName?.charAt(0)?.toUpperCase() }}
               </div>
               <div class="challenge-item__info">
-                <p class="challenge-item__title">
-                  <strong>{{ challenge.challengerName }}</strong> te ha retado
-                </p>
+                @if (challenge.isOpen) {
+                  <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> publicó un reto abierto</p>
+                } @else {
+                  <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> te ha retado</p>
+                }
+                @if (challenge.careerType) {
+                  <p class="challenge-item__date">Tipo: {{ challenge.careerType }}</p>
+                }
+                @if (challenge.agreedLocation) {
+                  <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
+                }
+                @if (challenge.agreedDate) {
+                  <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>
+                }
+                @if (challenge.notes) {
+                  <p class="challenge-item__date">Notas: {{ challenge.notes }}</p>
+                }
                 <p class="challenge-item__date">{{ challenge.createdAt | date:'dd MMM yyyy · HH:mm' }}</p>
               </div>
               <div class="challenge-item__actions">
-                <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
-                  ✓ Aceptar
-                </button>
-                <button class="btn btn--danger btn--sm" (click)="facade.rejectChallenge(challenge.id)">
-                  ✕ Rechazar
-                </button>
+                @if (challenge.challengerId !== currentUserId) {
+                  <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
+                    {{ challenge.isOpen ? '⚡ Participar' : '✓ Aceptar' }}
+                  </button>
+                }
+                @if (!challenge.isOpen && challenge.challengerId !== currentUserId) {
+                  <button class="btn btn--danger btn--sm" (click)="facade.rejectChallenge(challenge.id)">
+                    ✕ Rechazar
+                  </button>
+                }
               </div>
             </div>
           }
@@ -83,6 +101,15 @@
                 <p class="challenge-item__title">
                   {{ challenge.challengerName }} vs {{ challenge.challengedName }}
                 </p>
+                @if (challenge.challengerPlate || challenge.challengedPlate) {
+                  <p class="challenge-item__date">Vehículos: {{ challenge.challengerPlate || '-' }} vs {{ challenge.challengedPlate || '-' }}</p>
+                }
+                @if (challenge.agreedLocation) {
+                  <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
+                }
+                @if (challenge.agreedDate) {
+                  <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>
+                }
                 <p class="challenge-item__date">Aceptado · {{ challenge.createdAt | date:'dd MMM' }}</p>
               </div>
               <div class="challenge-item__actions">

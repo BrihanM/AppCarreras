@@ -47,8 +47,31 @@ class ChallengeRepositoryPg implements IChallengeRepository {
     const existing = await this.findById(id);
     if (!existing) throw new Error('Challenge not found');
     const updated = { ...existing, ...attrs } as any;
-    const q = `UPDATE challenges SET state=$1,winner_id=$2,agreed_location=$3,agreed_date=$4,notes=$5,updated_at=NOW() WHERE id=$6 RETURNING *`;
-    const values = [updated.state, updated.winner_id || null, updated.agreed_location || null, updated.agreed_date || null, updated.notes || null, id];
+    const q = `
+      UPDATE challenges
+      SET state=$1,
+          winner_id=$2,
+          agreed_location=$3,
+          agreed_date=$4,
+          notes=$5,
+          challenged_id=$6,
+          challenged_vehicle_id=$7,
+          career_type=$8,
+          updated_at=NOW()
+      WHERE id=$9
+      RETURNING *
+    `;
+    const values = [
+      updated.state,
+      updated.winner_id || null,
+      updated.agreed_location || null,
+      updated.agreed_date || null,
+      updated.notes || null,
+      updated.challenged_id || null,
+      updated.challenged_vehicle_id || null,
+      updated.career_type || null,
+      id,
+    ];
     const { rows } = await pool.query(q, values);
     return rows[0];
   }

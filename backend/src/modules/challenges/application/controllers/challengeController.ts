@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import ChallengeRepositoryPg from '../../infrastructure/adapters/pg/ChallengeRepositoryPg';
 import ChallengeService from '../../domain/services/ChallengeService';
-import { createChallengeSchema, completeChallengeSchema } from '../validators/challengeSchemas';
+import { createChallengeSchema, completeChallengeSchema, acceptChallengeSchema } from '../validators/challengeSchemas';
 import { pool } from '../../infrastructure/db';
 
 const repo = new ChallengeRepositoryPg();
@@ -12,6 +12,13 @@ const ensureAdmin = (req: Request): boolean => {
   const auth = (req as any).user;
   if (auth && auth.role) return auth.role === 'admin';
   return auth && auth.username === 'admin';
+};
+
+const resolveRequesterUserId = async (req: Request): Promise<string | null> => {
+  const authId = (req as any).user?.id ? String((req as any).user.id) : '';
+  if (!authId) return null;
+  const { rows } = await pool.query('SELECT id FROM users WHERE id = $1 OR account_id = $1 LIMIT 1', [authId]);
+  return rows[0]?.id || null;
 };
 
 /**
@@ -25,7 +32,14 @@ const create = async (req: Request, res: Response) => {
     // eslint-disable-next-line no-console
     console.log('[challenges.create] body:', JSON.stringify(req.body));
     const parsed = createChallengeSchema.parse(req.body);
-    const created = await service.createChallenge(parsed as any);
+    const requesterUserId = await resolveRequesterUserId(req);
+    if (!requesterUserId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const payload = {
+      ...parsed,
+      challenger_id: requesterUserId,
+    };
+    const created = await service.createChallenge(payload as any);
     res.status(201).json(created);
   } catch (err: any) {
     if (err instanceof ZodError) {
@@ -42,18 +56,30 @@ const create = async (req: Request, res: Response) => {
  */
 const list = async (req: Request, res: Response) => {
   try {
+    const requesterUserId = await resolveRequesterUserId(req);
+    if (!requesterUserId) return res.status(401).json({ error: 'Unauthorized' });
+
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
     const page = Math.max(1, Number(req.query.page) || 1);
     const offset = (page - 1) * limit;
+    const includeOpen = req.query.include_open !== 'false';
     // Join users to include challenger/challenged names and normalize keys to camelCase
     const q = `
-      SELECT c.*, u1.name AS challenger_name, u2.name AS challenged_name
+      SELECT c.*, u1.name AS challenger_name, u2.name AS challenged_name,
+             v1.plate AS challenger_plate, v2.plate AS challenged_plate
       FROM challenges c
       LEFT JOIN users u1 ON u1.id = c.challenger_id
       LEFT JOIN users u2 ON u2.id = c.challenged_id
-      ORDER BY c.created_at DESC LIMIT $1 OFFSET $2
+      LEFT JOIN vehicles v1 ON v1.id = c.challenger_vehicle_id
+      LEFT JOIN vehicles v2 ON v2.id = c.challenged_vehicle_id
+      WHERE (
+        c.challenger_id = $1
+        OR c.challenged_id = $1
+        OR (${includeOpen ? 'c.challenged_id IS NULL' : 'FALSE'})
+      )
+      ORDER BY c.created_at DESC LIMIT $2 OFFSET $3
     `;
-    const { rows } = await pool.query(q, [limit, offset]);
+    const { rows } = await pool.query(q, [requesterUserId, limit, offset]);
 
     // Normalize snake_case DB rows to frontend-friendly camelCase and map `state` -> `status`
     const data = rows.map((r: any) => ({
@@ -62,6 +88,7 @@ const list = async (req: Request, res: Response) => {
       challengedId: r.challenged_id,
       challengerVehicleId: r.challenger_vehicle_id,
       challengedVehicleId: r.challenged_vehicle_id,
+      careerType: r.career_type,
       status: r.state,
       winnerId: r.winner_id,
       agreedLocation: r.agreed_location,
@@ -71,6 +98,9 @@ const list = async (req: Request, res: Response) => {
       updatedAt: r.updated_at,
       challengerName: r.challenger_name,
       challengedName: r.challenged_name,
+      challengerPlate: r.challenger_plate,
+      challengedPlate: r.challenged_plate,
+      isOpen: !r.challenged_id,
     }));
 
     res.json({ success: true, message: 'Challenges listed', data });
@@ -86,7 +116,10 @@ const list = async (req: Request, res: Response) => {
 const accept = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const updated = await service.acceptChallenge(id);
+    const requesterUserId = await resolveRequesterUserId(req);
+    if (!requesterUserId) return res.status(401).json({ error: 'Unauthorized' });
+    const parsed = acceptChallengeSchema.parse(req.body || {});
+    const updated = await service.acceptChallenge(id, requesterUserId, parsed.challenged_vehicle_id);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -100,7 +133,9 @@ const accept = async (req: Request, res: Response) => {
 const rejectChallenge = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const updated = await service.rejectChallenge(id);
+    const requesterUserId = await resolveRequesterUserId(req);
+    if (!requesterUserId) return res.status(401).json({ error: 'Unauthorized' });
+    const updated = await service.rejectChallenge(id, requesterUserId);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

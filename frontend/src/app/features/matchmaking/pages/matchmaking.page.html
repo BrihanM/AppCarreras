@@ -5,6 +5,7 @@
       <p class="page-header__sub">Encuentra tu próximo rival en las calles</p>
     </div>
     <div class="page-header__filters">
+      <button class="btn btn--primary btn--sm" (click)="openOpenChallengeModal()">+ Reto abierto</button>
       <input
         class="filter-input"
         type="text"
@@ -73,7 +74,7 @@
           <button
             class="pilot-card__challenge-btn"
             [disabled]="isSelf(pilot) || pilot['inChallenge'] || hasActiveOpponent(pilot) || !sameRank(pilot)"
-            (click)="challengePilot(pilot)"
+            (click)="openDirectChallengeModal(pilot)"
           >
             @if (pilot['inChallenge'] || challengedIds.has(pilot.id)) {
               ✓ RETO ENVIADO
@@ -92,3 +93,70 @@
     </div>
   }
 </div>
+
+@if (showChallengeModal) {
+  <div class="challenge-modal-backdrop" (click)="closeChallengeModal()">
+    <div class="challenge-modal" (click)="$event.stopPropagation()">
+      <div class="challenge-modal__header">
+        <h2>
+          @if (challengeMode === 'open') {
+            Crear reto abierto
+          } @else {
+            Retar a {{ selectedPilot?.username }}
+          }
+        </h2>
+        <button class="btn btn--sm" (click)="closeChallengeModal()">Cerrar</button>
+      </div>
+
+      <div class="challenge-form-grid">
+        <div class="form-group">
+          <label>Tu vehículo</label>
+          <select class="filter-input" [(ngModel)]="challengeForm.challenger_vehicle_id">
+            <option value="">Selecciona tu vehículo</option>
+            @for (v of myVehicles; track v.id) {
+              <option [value]="v.id">{{ v.make }} {{ v.model }} · {{ v.plate }}</option>
+            }
+          </select>
+        </div>
+
+        @if (challengeMode === 'direct') {
+          <div class="form-group">
+            <label>Vehículo rival (opcional)</label>
+            <select class="filter-input" [(ngModel)]="challengeForm.challenged_vehicle_id">
+              <option value="">Se define al aceptar</option>
+              @for (v of directPilotVehicles; track v.id) {
+                <option [value]="v.id">{{ v.make }} {{ v.model }} · {{ v.plate }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="form-group">
+          <label>Tipo de carrera (`career_type`)</label>
+          <input class="filter-input" type="text" [(ngModel)]="challengeForm.career_type" placeholder="street, drag, etc." />
+        </div>
+
+        <div class="form-group">
+          <label>Ubicación (`agreed_location`)</label>
+          <input class="filter-input" type="text" [(ngModel)]="challengeForm.agreed_location" placeholder="Old Bridge" />
+        </div>
+
+        <div class="form-group">
+          <label>Fecha acordada (`agreed_date`)</label>
+          <input class="filter-input" type="date" [(ngModel)]="challengeForm.agreed_date" />
+        </div>
+
+        <div class="form-group form-group--full">
+          <label>Notas (`notes`)</label>
+          <textarea class="filter-input" rows="3" [(ngModel)]="challengeForm.notes" placeholder="Detalles del reto"></textarea>
+        </div>
+      </div>
+
+      <div class="challenge-modal__actions">
+        <button class="btn btn--primary" (click)="submitChallengeForm()">
+          @if (challengeMode === 'open') { Publicar reto abierto } @else { Enviar reto directo }
+        </button>
+      </div>
+    </div>
+  </div>
+}

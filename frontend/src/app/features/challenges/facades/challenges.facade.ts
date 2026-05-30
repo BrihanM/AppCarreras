@@ -14,6 +14,7 @@ import { ChallengeStatus } from '@shared/enums/app.enums';
 import { WebSocketService } from '@core/websocket/websocket.service';
 import { SocketEvent } from '@shared/enums/app.enums';
 import { MatchmakingFacade } from '@features/matchmaking/facades/matchmaking.facade';
+import { VehiclesService } from '@features/vehicles/services/vehicles.service';
 import { Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +24,7 @@ export class ChallengesFacade {
   readonly authService = inject(AuthService);
   private readonly wsService = inject(WebSocketService);
   private readonly matchmaking = inject(MatchmakingFacade);
+  private readonly vehiclesService = inject(VehiclesService);
   private wsSub?: Subscription;
 
   readonly isLoading = signal(false);
@@ -33,7 +35,10 @@ export class ChallengesFacade {
     this.challenges().filter(
       (c) =>
         c.status === ChallengeStatus.Pending &&
-        c.challengedId === this.authService.currentUser()?.id
+        (
+          c.challengedId === this.authService.currentUser()?.id ||
+          !c.challengedId
+        )
     )
   );
 
@@ -88,13 +93,23 @@ export class ChallengesFacade {
    * @param id ID del reto.
    */
   acceptChallenge(id: string): void {
-    this.challengesService.acceptChallenge(id).subscribe({
-      next: (res) => {
-        const updated = (res as any)?.data ?? (res as any);
-        this.updateChallenge(updated);
-        this.toastService.success('¡Reto aceptado! ¡Que gane el mejor!');
+    this.vehiclesService.getMyVehicles().subscribe({
+      next: (vehRes) => {
+        const myVehicle = (vehRes?.data || []).find((v: any) => v.active) || (vehRes?.data || [])[0];
+        if (!myVehicle?.id) {
+          this.toastService.error('Necesitas un vehículo activo para aceptar el reto.');
+          return;
+        }
+        this.challengesService.acceptChallenge(id, { challenged_vehicle_id: String(myVehicle.id) }).subscribe({
+          next: (res) => {
+            const updated = (res as any)?.data ?? (res as any);
+            this.updateChallenge(updated);
+            this.toastService.success('¡Reto aceptado! ¡Que gane el mejor!');
+          },
+          error: () => this.toastService.error('Error al aceptar el reto.'),
+        });
       },
-      error: () => this.toastService.error('Error al aceptar el reto.'),
+      error: () => this.toastService.error('No se pudieron cargar tus vehículos para aceptar el reto.'),
     });
   }
 
@@ -138,6 +153,12 @@ export class ChallengesFacade {
       challengerName: raw.challengerName || raw.challenger_name || '',
       challengedName: raw.challengedName || raw.challenged_name || '',
       status: (raw.status || raw.state) as any,
+      careerType: raw.careerType || raw.career_type,
+      challengerVehicleId: raw.challengerVehicleId || raw.challenger_vehicle_id,
+      challengedVehicleId: raw.challengedVehicleId || raw.challenged_vehicle_id,
+      challengerPlate: raw.challengerPlate || raw.challenger_plate,
+      challengedPlate: raw.challengedPlate || raw.challenged_plate,
+      isOpen: typeof raw.isOpen === 'boolean' ? raw.isOpen : !(raw.challengedId || raw.challenged_id),
       winnerId: raw.winnerId || raw.winner_id,
       agreedLocation: (raw as any).agreedLocation || raw.agreed_location,
       agreedDate: (raw as any).agreedDate || raw.agreed_date,

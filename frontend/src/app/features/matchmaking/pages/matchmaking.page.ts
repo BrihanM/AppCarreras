@@ -2,7 +2,7 @@
  * @fileoverview Página de Matchmaking.
  * Grid dinámico de pilotos disponibles con cards tipo social app.
  */
-import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 // RouterLink removed: not used in this template
@@ -12,7 +12,6 @@ import { EmptyStateComponent } from '../../../shared/components/ui/empty-state/e
 import { ChallengesService } from '../../challenges/services/challenges.service';
 import { ToastService } from '@core/services/toast.service';
 import { User } from '@shared/interfaces';
-import { ChallengeStatus } from '@shared/enums/app.enums';
 import { VehiclesService } from '@features/vehicles/services/vehicles.service';
 import { forkJoin } from 'rxjs';
 
@@ -25,7 +24,6 @@ import { forkJoin } from 'rxjs';
 })
 export class MatchmakingPage implements OnInit {
   readonly facade = inject(MatchmakingFacade);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly challengesService = inject(ChallengesService);
   private readonly toastService = inject(ToastService);
   private readonly vehiclesService = inject(VehiclesService);
@@ -33,6 +31,21 @@ export class MatchmakingPage implements OnInit {
   cityFilter = '';
   challengedIds = new Set<string>();
   activeOpponentIds = new Set<string>();
+
+  showChallengeModal = false;
+  challengeMode: 'open' | 'direct' = 'direct';
+  selectedPilot: User | null = null;
+  myVehicles: any[] = [];
+  directPilotVehicles: any[] = [];
+
+  challengeForm: any = {
+    career_type: '',
+    challenger_vehicle_id: '',
+    challenged_vehicle_id: '',
+    agreed_location: '',
+    agreed_date: '',
+    notes: '',
+  };
 
   // Helpers used by the template to avoid calling global constructors in templates
   isSelf(pilot: User): boolean {
@@ -82,105 +95,108 @@ export class MatchmakingPage implements OnInit {
     this.facade.applyFilter(this.cityFilter);
   }
 
-  /**
-   * Reta a un piloto enviando un reto inmediato.
-   * @param pilot Piloto a retar.
-   */
-  challengePilot(pilot: User): void {
+  openOpenChallengeModal(): void {
+    this.challengeMode = 'open';
+    this.selectedPilot = null;
+    this.resetChallengeForm();
+    this.loadVehiclesForForm();
+    this.showChallengeModal = true;
+  }
+
+  openDirectChallengeModal(pilot: User): void {
     const current = this.facade.authService.currentUser();
     if (!current) { this.toastService.error('Usuario no autenticado'); return; }
     if (String(pilot.id) === String(current.id)) { this.toastService.error('No puedes retarte a ti mismo'); return; }
     if ((String(pilot.rank || '') !== String(current.rank || ''))) { this.toastService.error('Solo puedes retar a pilotos de tu mismo rank'); return; }
     if (this.activeOpponentIds.has(String(pilot.id)) || this.challengedIds.has(String(pilot.id))) { this.toastService.error('Ya existe un reto activo con este piloto'); return; }
 
-    // Retrieve active vehicles for challenger and challenged to satisfy backend schema
-    const me$ = this.vehiclesService.getMyVehicles();
-    const other$ = this.vehiclesService.getVehiclesForUser(String(pilot.id));
+    this.challengeMode = 'direct';
+    this.selectedPilot = pilot;
+    this.resetChallengeForm();
+    this.loadVehiclesForForm(pilot);
+    this.showChallengeModal = true;
+  }
 
-    // More permissive UUID check for debugging (accept any version/variant).
-    const isUuid = (v?: any) => {
-      const ok = typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
-      if (!ok) {
-        // eslint-disable-next-line no-console
-        console.warn('[matchmaking] isUuid failed for value:', v);
-      }
-      return ok;
+  closeChallengeModal(): void {
+    this.showChallengeModal = false;
+    this.selectedPilot = null;
+    this.directPilotVehicles = [];
+  }
+
+  private resetChallengeForm(): void {
+    this.challengeForm = {
+      career_type: '',
+      challenger_vehicle_id: '',
+      challenged_vehicle_id: '',
+      agreed_location: '',
+      agreed_date: '',
+      notes: '',
+    };
+  }
+
+  private loadVehiclesForForm(pilot?: User): void {
+    const reqs: any = { me: this.vehiclesService.getMyVehicles() };
+    if (pilot) reqs.other = this.vehiclesService.getVehiclesForUser(String(pilot.id));
+
+    forkJoin(reqs).subscribe({
+      next: ({ me, other }: any) => {
+        this.myVehicles = me?.data || [];
+        const activeMine = this.myVehicles.find((v: any) => v.active) || this.myVehicles[0];
+        this.challengeForm.challenger_vehicle_id = activeMine?.id || '';
+
+        this.directPilotVehicles = other?.data || [];
+        const activeOther = this.directPilotVehicles.find((v: any) => v.active) || this.directPilotVehicles[0];
+        this.challengeForm.challenged_vehicle_id = activeOther?.id || '';
+      },
+      error: () => this.toastService.error('No se pudieron cargar los vehículos para el reto.'),
+    });
+  }
+
+  submitChallengeForm(): void {
+    const current = this.facade.authService.currentUser();
+    if (!current) { this.toastService.error('Usuario no autenticado'); return; }
+    if (!this.challengeForm.challenger_vehicle_id) { this.toastService.error('Selecciona tu vehículo para crear el reto.'); return; }
+
+    if (this.challengeMode === 'direct' && !this.selectedPilot) {
+      this.toastService.error('Selecciona un piloto para el reto directo.');
+      return;
+    }
+
+    const payload: any = {
+      challenger_vehicle_id: String(this.challengeForm.challenger_vehicle_id),
+      career_type: this.challengeForm.career_type || undefined,
+      agreed_location: this.challengeForm.agreed_location || undefined,
+      agreed_date: this.challengeForm.agreed_date || undefined,
+      notes: this.challengeForm.notes || undefined,
     };
 
-    forkJoin({ me: me$, other: other$ }).subscribe({
-      next: ({ me, other }) => {
-        const myVeh = (me?.data || []).find((v: any) => v.active) || (me?.data || [])[0];
-        const theirVeh = (other?.data || []).find((v: any) => v.active) || (other?.data || [])[0];
-        if (!myVeh) { this.toastService.error('Activa un vehículo antes de retar'); return; }
-        if (!theirVeh) { this.toastService.error('El rival no tiene vehículo activo'); return; }
+    if (this.challengeMode === 'direct' && this.selectedPilot) {
+      payload.challenged_id = String(this.selectedPilot.id);
+      if (this.challengeForm.challenged_vehicle_id) {
+        payload.challenged_vehicle_id = String(this.challengeForm.challenged_vehicle_id);
+      }
+    }
 
-        const payload: any = {
-          challenger_id: String(current.id),
-          challenged_id: String(pilot.id),
-          challenger_vehicle_id: String(myVeh.id),
-          challenged_vehicle_id: String(theirVeh.id),
-        };
-
-        // client-side validation: ensure all UUIDs look valid before sending
-        const checks = {
-          challenger_id: payload.challenger_id,
-          challenged_id: payload.challenged_id,
-          challenger_vehicle_id: payload.challenger_vehicle_id,
-          challenged_vehicle_id: payload.challenged_vehicle_id,
-        } as Record<string, any>;
-        const invalid = Object.entries(checks).filter(([, v]) => !isUuid(v));
-        if (invalid.length) {
-          // eslint-disable-next-line no-console
-          console.error('[matchmaking] invalid uuid fields:', invalid, 'fullPayload:', payload);
-          this.toastService.error('Payload inválido: UUIDs no válidos. Revisa consola para detalles.');
+    this.challengesService.createChallenge(payload).subscribe({
+      next: () => {
+        if (this.challengeMode === 'direct' && this.selectedPilot) {
+          this.challengedIds.add(String(this.selectedPilot.id));
+          this.activeOpponentIds.add(String(this.selectedPilot.id));
+        }
+        this.toastService.success(this.challengeMode === 'open' ? 'Reto abierto creado.' : 'Reto directo creado.');
+        this.closeChallengeModal();
+      },
+      error: (err: any) => {
+        const serverErr = err?.error;
+        if (Array.isArray(serverErr) && serverErr.length) {
+          const first = serverErr[0];
+          const path = Array.isArray(first.path) ? first.path.join('.') : first.path;
+          const msg = first.message || JSON.stringify(first);
+          this.toastService.error(`Error: ${path} ${msg}`);
           return;
         }
-
-        // Optimistic UI: mark pilot as challenged to block further actions
-        this.facade.markPilotInChallenge(String(pilot.id), true);
-        // also keep local sets for existing UI logic
-        setTimeout(() => {
-          this.challengedIds.add(String(pilot.id));
-          try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
-        }, 0);
-
-        // DEBUG: log vehicles and payload to troubleshoot invalid UUID errors
-        // Remove these logs after verification
-        // eslint-disable-next-line no-console
-        console.log('[matchmaking] vehicles.me:', me, 'vehicles.other:', other, 'payload:', payload);
-
-        this.challengesService.createChallenge(payload).subscribe({
-          next: () => {
-            setTimeout(() => {
-              this.activeOpponentIds.add(String(pilot.id));
-              try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
-              this.toastService.success(`¡Reto enviado a ${pilot.username}!`);
-            }, 0);
-          },
-          error: (err: any) => {
-            setTimeout(() => {
-              this.facade.markPilotInChallenge(String(pilot.id), false);
-              this.challengedIds.delete(String(pilot.id));
-              try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
-              // Log server response for investigation (stringify to reveal array content)
-              // eslint-disable-next-line no-console
-              console.error('[matchmaking] createChallenge error:', JSON.stringify(err?.error ?? err));
-
-              // If server returned structured Zod issues, show the first message
-              const serverErr = err?.error;
-              if (Array.isArray(serverErr) && serverErr.length) {
-                const first = serverErr[0];
-                const path = Array.isArray(first.path) ? first.path.join('.') : first.path;
-                const msg = first.message || JSON.stringify(first);
-                this.toastService.error(`Error: ${path} ${msg}`);
-              } else {
-                this.toastService.error('Error al enviar el reto. Revisa consola para detalles.');
-              }
-            }, 0);
-          },
-        });
+        this.toastService.error('No se pudo crear el reto.');
       },
-      error: () => this.toastService.error('Error obteniendo vehículos para el reto'),
     });
   }
 }

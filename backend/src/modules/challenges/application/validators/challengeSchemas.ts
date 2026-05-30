@@ -11,14 +11,18 @@ const relaxedUuid = z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]
 });
 
 export const createChallengeSchema = z.object({
-  challenger_id: relaxedUuid,
-  challenged_id: relaxedUuid,
+  challenger_id: relaxedUuid.optional(),
+  challenged_id: relaxedUuid.optional(),
   career_type: z.string().optional(),
   challenger_vehicle_id: relaxedUuid,
-  challenged_vehicle_id: relaxedUuid,
+  challenged_vehicle_id: relaxedUuid.optional(),
   agreed_location: z.string().optional(),
   agreed_date: z.string().optional(), // ISO date string
   notes: z.string().optional(),
+});
+
+export const acceptChallengeSchema = z.object({
+  challenged_vehicle_id: relaxedUuid.optional(),
 });
 
 /**

@@ -3,10 +3,10 @@ export type ChallengeState = 'pending' | 'accepted' | 'rejected' | 'completed';
 export interface Challenge {
   id: string;
   challenger_id: string;
-  challenged_id: string;
+  challenged_id?: string | null;
   career_type?: string | null;
   challenger_vehicle_id: string;
-  challenged_vehicle_id: string;
+  challenged_vehicle_id?: string | null;
   state: ChallengeState;
   winner_id?: string | null;
   agreed_location?: string | null;

@@ -38,8 +38,8 @@ export class ChallengesService {
    * Acepta un reto recibido.
    * @param id ID del reto.
    */
-  acceptChallenge(id: string): Observable<ApiResponse<Challenge>> {
-    return this.http.patch<ApiResponse<Challenge>>(`${this.base}/${id}/accept`, {});
+  acceptChallenge(id: string, payload?: { challenged_vehicle_id?: string }): Observable<ApiResponse<Challenge>> {
+    return this.http.patch<ApiResponse<Challenge>>(`${this.base}/${id}/accept`, payload || {});
   }
 
   /**
