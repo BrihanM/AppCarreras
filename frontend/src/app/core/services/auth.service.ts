@@ -17,6 +17,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '@environments/environment';
 import { StorageService } from './storage.service';
+import { CacheService } from './cache.service';
 import { STORAGE_KEYS, APP_ROUTES } from '../constants/app.constants';
 import {
   User,
@@ -150,6 +151,13 @@ export class AuthService {
     this.storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
     this.storage.remove(STORAGE_KEYS.USER);
     this._currentUser.set(null);
+    // Clear in-memory cache if available
+    try {
+      const cache = inject(CacheService);
+      cache.clear();
+    } catch (e) {
+      // ignore if cache service cannot be resolved here
+    }
     this.router.navigate([APP_ROUTES.AUTH.LOGIN]);
   }
 }
