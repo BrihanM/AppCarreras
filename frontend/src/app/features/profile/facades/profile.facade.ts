@@ -41,7 +41,9 @@ export class ProfileFacade {
     const lastName = rest.join(' ') || undefined;
 
     const mapped: User = {
-      id: profile?.account_id ?? profile?.id ?? current.id ?? '',
+      // Prefer the `users.id` (profile.id) so client lookups like `/users/{id}/vehicles`
+      // use the correct user UUID. Fallback to `account_id` when `id` missing.
+      id: profile?.id ?? profile?.account_id ?? current.id ?? '',
       username: current.username ?? profile?.username ?? profile?.name ?? '',
       email: current.email ?? profile?.email ?? '',
       role: (current.role ?? 'user') as any,

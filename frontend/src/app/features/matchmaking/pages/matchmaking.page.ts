@@ -96,6 +96,16 @@ export class MatchmakingPage implements OnInit {
     const me$ = this.vehiclesService.getMyVehicles();
     const other$ = this.vehiclesService.getVehiclesForUser(String(pilot.id));
 
+    // More permissive UUID check for debugging (accept any version/variant).
+    const isUuid = (v?: any) => {
+      const ok = typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+      if (!ok) {
+        // eslint-disable-next-line no-console
+        console.warn('[matchmaking] isUuid failed for value:', v);
+      }
+      return ok;
+    };
+
     forkJoin({ me: me$, other: other$ }).subscribe({
       next: ({ me, other }) => {
         const myVeh = (me?.data || []).find((v: any) => v.active) || (me?.data || [])[0];
@@ -110,17 +120,54 @@ export class MatchmakingPage implements OnInit {
           challenged_vehicle_id: String(theirVeh.id),
         };
 
+        // client-side validation: ensure all UUIDs look valid before sending
+        const checks = {
+          challenger_id: payload.challenger_id,
+          challenged_id: payload.challenged_id,
+          challenger_vehicle_id: payload.challenger_vehicle_id,
+          challenged_vehicle_id: payload.challenged_vehicle_id,
+        } as Record<string, any>;
+        const invalid = Object.entries(checks).filter(([, v]) => !isUuid(v));
+        if (invalid.length) {
+          // eslint-disable-next-line no-console
+          console.error('[matchmaking] invalid uuid fields:', invalid, 'fullPayload:', payload);
+          this.toastService.error('Payload inválido: UUIDs no válidos. Revisa consola para detalles.');
+          return;
+        }
+
         // mark as challenged in next tick to avoid ExpressionChangedAfterItHasBeenCheckedError
         setTimeout(() => this.challengedIds.add(String(pilot.id)), 0);
 
+        // DEBUG: log vehicles and payload to troubleshoot invalid UUID errors
+        // Remove these logs after verification
+        // eslint-disable-next-line no-console
+        console.log('[matchmaking] vehicles.me:', me, 'vehicles.other:', other, 'payload:', payload);
+
         this.challengesService.createChallenge(payload).subscribe({
           next: () => {
-            setTimeout(() => this.activeOpponentIds.add(String(pilot.id)), 0);
-            this.toastService.success(`¡Reto enviado a ${pilot.username}!`);
+            setTimeout(() => {
+              this.activeOpponentIds.add(String(pilot.id));
+              this.toastService.success(`¡Reto enviado a ${pilot.username}!`);
+            }, 0);
           },
-          error: () => {
-            setTimeout(() => this.challengedIds.delete(String(pilot.id)), 0);
-            this.toastService.error('Error al enviar el reto.');
+          error: (err: any) => {
+            setTimeout(() => {
+              this.challengedIds.delete(String(pilot.id));
+              // Log server response for investigation (stringify to reveal array content)
+              // eslint-disable-next-line no-console
+              console.error('[matchmaking] createChallenge error:', JSON.stringify(err?.error ?? err));
+
+              // If server returned structured Zod issues, show the first message
+              const serverErr = err?.error;
+              if (Array.isArray(serverErr) && serverErr.length) {
+                const first = serverErr[0];
+                const path = Array.isArray(first.path) ? first.path.join('.') : first.path;
+                const msg = first.message || JSON.stringify(first);
+                this.toastService.error(`Error: ${path} ${msg}`);
+              } else {
+                this.toastService.error('Error al enviar el reto. Revisa consola para detalles.');
+              }
+            }, 0);
           },
         });
       },

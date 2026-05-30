@@ -5,8 +5,8 @@ const router = Router();
 
 router.get('/challenges', challengeController.list);
 router.post('/challenges', challengeController.create);
-router.put('/challenges/:id/accept', challengeController.accept);
-router.put('/challenges/:id/reject', challengeController.reject);
-router.put('/challenges/:id/complete', challengeController.complete);
+router.patch('/challenges/:id/accept', challengeController.accept);
+router.patch('/challenges/:id/reject', challengeController.reject);
+router.patch('/challenges/:id/complete', challengeController.complete);
 
 export default router;
