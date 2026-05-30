@@ -23,7 +23,7 @@ io(wsUrl, { auth: { token } })
 | `challenge:received` | `Challenge` | Future: ChallengeFacade |
 | `challenge:accepted` | `Challenge` | Future: ChallengeFacade |
 | `challenge:completed` | `Challenge` | Future: ChallengeFacade |
-| `rank:updated` | `{ userId, rank, points }` | Future: DashboardFacade |
+| `rank:updated` | `{ userId, rank }` | Future: DashboardFacade |
 | `online:user` | `{ userId, online }` | Future: MatchmakingFacade |
 
 ## Usage Pattern

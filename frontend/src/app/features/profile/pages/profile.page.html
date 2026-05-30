@@ -32,8 +32,8 @@
       <span class="stat-card__label">Ranking</span>
     </div>
     <div class="stat-card">
-      <span class="stat-card__value">{{ facade.currentUser()?.points ?? 0 }}</span>
-      <span class="stat-card__label">Puntos</span>
+      <span class="stat-card__value">{{ facade.currentUser()?.rank ?? '-' }}</span>
+      <span class="stat-card__label">Rango</span>
     </div>
     <div class="stat-card">
       <span class="stat-card__value">{{ facade.currentUser()?.wins ?? 0 }}</span>

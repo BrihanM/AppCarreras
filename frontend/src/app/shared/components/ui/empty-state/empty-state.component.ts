@@ -12,14 +12,7 @@ import { CommonModule } from '@angular/common';
   selector: 'srx-empty-state',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="empty-state">
-      <span class="empty-state__icon">{{ icon }}</span>
-      <h3 class="empty-state__title">{{ title }}</h3>
-      <p class="empty-state__message">{{ message }}</p>
-      <ng-content />
-    </div>
-  `,
+  templateUrl: './empty-state.component.html',
   styleUrls: ['./empty-state.component.scss'],
 })
 export class EmptyStateComponent {

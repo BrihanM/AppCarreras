@@ -13,7 +13,9 @@ const service = new CategoryService(repo);
 const list = async (_req: Request, res: Response) => {
   try {
     const items = await service.listCategories();
-    res.json(items);
+    // Return paginated-style envelope to match frontend expectations
+    const pagination = { page: 1, limit: items.length, total: items.length, totalPages: 1 };
+    res.json({ success: true, message: 'Categories listed', data: items, pagination });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -27,7 +29,7 @@ const create = async (req: Request, res: Response) => {
   try {
     const parsed = createCategorySchema.parse(req.body);
     const created = await service.createCategory(parsed as any);
-    res.status(201).json(created);
+    res.status(201).json({ success: true, message: 'Category created', data: created });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -42,7 +44,7 @@ const update = async (req: Request, res: Response) => {
     const id = String(req.params.id);
     const parsed = updateCategorySchema.parse(req.body);
     const updated = await service.updateCategory(id, parsed as any);
-    res.json(updated);
+    res.json({ success: true, message: 'Category updated', data: updated });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

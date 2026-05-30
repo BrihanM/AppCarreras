@@ -44,17 +44,17 @@ export class ProfileFacade {
       // Prefer the `users.id` (profile.id) so client lookups like `/users/{id}/vehicles`
       // use the correct user UUID. Fallback to `account_id` when `id` missing.
       id: profile?.id ?? profile?.account_id ?? current.id ?? '',
-      username: current.username ?? profile?.username ?? profile?.name ?? '',
-      email: current.email ?? profile?.email ?? '',
-      role: (current.role ?? 'user') as any,
-      status: (current.status ?? 'active') as any,
+      // Use profile values first; fallback to account/current values
+      username: profile?.username ?? profile?.name ?? current.username ?? '',
+      email: profile?.email ?? current.email ?? '',
+      role: (profile?.role ?? current.role ?? 'user') as any,
+      status: (profile?.state ?? current.status ?? 'active') as any,
       firstName: firstName || undefined,
       lastName: lastName || undefined,
       city: profile?.city_area ?? current.city ?? undefined,
       avatarUrl: (profile?.avatar_url ?? current.avatarUrl ?? (current as any).photo) ?? undefined,
       bio: profile?.bio ?? (current as any).bio ?? undefined,
       rank: String(profile?.rank ?? current.rank ?? 'D'),
-      points: Number((current.points ?? 0) as any),
       wins: Number(profile?.victories ?? current.wins ?? 0),
       losses: Number(profile?.defeats ?? current.losses ?? 0),
       createdAt: profile?.created_at ?? current.createdAt ?? new Date().toISOString(),

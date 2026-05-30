@@ -48,7 +48,7 @@ export class AdminService {
 
   /** Lista todas las categorías. */
   getCategories(): Observable<PaginatedResponse<Category>> {
-    return this.http.get<PaginatedResponse<Category>>(`${this.base}/categories`);
+    return this.http.get<PaginatedResponse<Category>>(`${this.base}/categories`, { withCredentials: true });
   }
 
   /** Lista reglas de invalidación (admin). */
@@ -76,7 +76,7 @@ export class AdminService {
    * @param payload Datos de la categoría.
    */
   createCategory(payload: CategoryPayload): Observable<ApiResponse<Category>> {
-    return this.http.post<ApiResponse<Category>>(`${this.base}/categories`, payload);
+    return this.http.post<ApiResponse<Category>>(`${this.base}/categories`, payload, { withCredentials: true });
   }
 
   /**
@@ -84,6 +84,10 @@ export class AdminService {
    * @param id ID de la categoría.
    */
   deleteCategory(id: string): Observable<ApiResponse<void>> {
-    return this.http.delete<ApiResponse<void>>(`${this.base}/categories/${id}`);
+    return this.http.delete<ApiResponse<void>>(`${this.base}/categories/${id}`, { withCredentials: true });
+  }
+
+  updateCategory(id: string, payload: Partial<CategoryPayload>): Observable<ApiResponse<Category>> {
+    return this.http.put<ApiResponse<Category>>(`${this.base}/categories/${id}`, payload, { withCredentials: true });
   }
 }

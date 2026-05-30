@@ -35,7 +35,8 @@ const getById = async (req: Request, res: Response) => {
     if (!user) return res.status(404).json({ error: 'Not found' });
     res.json(user);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error('Error in userController.list:', err);
+    res.status(500).json({ error: err.message, stack: err.stack ? String(err.stack).split('\n').slice(0,5) : undefined });
   }
 };
 
@@ -188,17 +189,49 @@ const list = async (req: Request, res: Response) => {
     const order = `ORDER BY CASE rank WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 0 END DESC, victories DESC`;
 
     const offset = (page - 1) * limit;
-    const q = `SELECT * FROM users ${where} ${order} LIMIT $${idx++} OFFSET $${idx++}`;
+    // Join with accounts to include username/email/role/state for admin listing
+    // select only columns that exist in accounts table (role/state may not be present on older schemas)
+    const q = `SELECT u.*, a.username, a.email, a.photo as account_photo, a.last_connection
+           FROM users u
+           LEFT JOIN accounts a ON a.id = u.account_id
+           ${where} ${order} LIMIT $${idx++} OFFSET $${idx++}`;
     values.push(limit, offset);
 
+    console.log('userController.list executing query:', q);
+    console.log('userController.list values:', values);
     const { rows } = await pool.query(q, values);
+
+    // Normalize rows to include common frontend fields: username, email, role, status
+    const normalized = rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      avatar_url: r.avatar_url,
+      bio: r.bio,
+      category_id: r.category_id,
+      victories: r.victories,
+      defeats: r.defeats,
+      rank: r.rank,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      // Account fields (role/status may not exist in schema; default accordingly)
+      username: r.username,
+      email: r.email,
+      avatarUrl: r.account_photo ?? r.avatar_url,
+      role: r.account_role ?? 'user',
+      status: r.account_state ?? r.state ?? 'active',
+    }));
 
     // total count for pagination
     const countQ = `SELECT COUNT(*)::int as total FROM users ${where}`;
+    console.log('userController.list count query:', countQ);
+    console.log('userController.list count values:', values.slice(0, values.length - 2));
     const { rows: cr } = await pool.query(countQ, values.slice(0, values.length - 2));
     const total = cr[0]?.total || rows.length;
 
-    res.json({ success: true, message: 'Users listed', data: rows, total });
+    const pagination = { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) };
+    res.json({ success: true, message: 'Users listed', data: normalized, pagination });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

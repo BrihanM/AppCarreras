@@ -16,7 +16,6 @@ export interface User {
   city?: string;
   avatarUrl?: string;
   rank: string;
-  points: number;
   wins: number;
   losses: number;
   /** Marca temporalmente si el piloto está en un reto (optimistic UI). */

@@ -48,6 +48,43 @@ export class AuthService {
   /** Computed signal: true si el usuario es admin. */
   readonly isAdmin = computed(() => this._currentUser()?.role === 'admin');
 
+  // bootstrap: if there is a persisted user but role is missing, refresh profile from server
+  private async bootstrap(): Promise<void> {
+    const existing = this._currentUser();
+    if (existing && typeof existing.role === 'undefined') {
+      try {
+        const resp: any = await this.http.get(`${environment.apiUrl}/users/me`).toPromise();
+        const profile = resp?.data ?? resp;
+        const [firstName, ...rest] = (profile?.name ?? '').split(' ');
+        const lastName = rest.join(' ') || undefined;
+        const mapped = {
+          id: profile?.id ?? existing.id,
+          username: profile?.username ?? existing.username ?? '',
+          email: existing.email ?? '',
+          role: (existing?.role ?? (existing?.username === 'admin' ? 'admin' : 'user')) as any,
+          status: (existing?.status ?? 'active') as any,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          city: profile?.city_area ?? existing.city ?? undefined,
+          avatarUrl: profile?.avatar_url ?? (existing as any).photo ?? existing.avatarUrl,
+          bio: profile?.bio ?? existing.bio,
+          rank: String(profile?.rank ?? existing.rank ?? 'D'),
+          wins: Number(profile?.victories ?? existing.wins ?? 0),
+          losses: Number(profile?.defeats ?? existing.losses ?? 0),
+          createdAt: profile?.created_at ?? existing.createdAt ?? new Date().toISOString(),
+          updatedAt: profile?.updated_at ?? existing.updatedAt ?? new Date().toISOString(),
+        } as any;
+        this.storage.set(STORAGE_KEYS.USER, mapped);
+        this._currentUser.set(mapped);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // invoke bootstrap asynchronously
+  private _init = void this.bootstrap();
+
   /**
    * Autentica al usuario con email y contraseña.
    * Persiste el token y el perfil en localStorage.
@@ -58,7 +95,7 @@ export class AuthService {
   login(credentials: LoginCredentials): Observable<ApiResponse<AuthResponse>> {
     const body = { identifier: credentials.email, password: credentials.password };
     return this.http
-      .post<ApiResponse<AuthResponse>>(`${this.apiUrl}/login`, body)
+      .post<ApiResponse<AuthResponse>>(`${this.apiUrl}/login`, body, { withCredentials: true })
       .pipe(
         tap(({ data }) => {
           this.storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
@@ -76,7 +113,8 @@ export class AuthService {
                 id: profile?.id ?? accountRaw?.id,
                 username: profile?.name ?? accountRaw?.username ?? '',
                 email: accountRaw?.email ?? '',
-                role: (accountRaw?.role ?? 'user') as any,
+                // If DB lacks `role` column, treat seeded 'admin' username as admin fallback
+                role: (accountRaw?.role ?? (accountRaw?.username === 'admin' ? 'admin' : 'user')) as any,
                 status: (accountRaw?.state ?? 'active') as any,
                 firstName: firstName || undefined,
                 lastName: lastName || undefined,
@@ -84,7 +122,6 @@ export class AuthService {
                 avatarUrl: profile?.avatar_url ?? accountRaw?.photo ?? undefined,
                 bio: profile?.bio ?? undefined,
                 rank: String(profile?.rank ?? 'D'),
-                points: Number(profile?.points ?? 0),
                 wins: Number(profile?.victories ?? 0),
                 losses: Number(profile?.defeats ?? 0),
                 createdAt: profile?.created_at ?? new Date().toISOString(),
@@ -131,7 +168,7 @@ export class AuthService {
    * Limpia el almacenamiento local y redirige al login.
    */
   logout(): void {
-    this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
+    this.http.post(`${this.apiUrl}/logout`, {}, { withCredentials: true }).subscribe({
       complete: () => this.clearSession(),
       error: () => this.clearSession(),
     });

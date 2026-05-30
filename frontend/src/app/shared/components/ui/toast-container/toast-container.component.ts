@@ -15,20 +15,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
   selector: 'srx-toast-container',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="toast-container" role="alert" aria-live="polite">
-      @for (toast of toasts; track toast.id) {
-        <div
-          class="toast toast--{{ toast.type }}"
-          (click)="toastService.dismiss(toast.id)"
-          [@slideIn]
-        >
-          <span class="toast__icon">{{ getIcon(toast.type) }}</span>
-          <span class="toast__message">{{ toast.message }}</span>
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './toast-container.component.html',
   styleUrls: ['./toast-container.component.scss'],
   animations: [
     trigger('slideIn', [

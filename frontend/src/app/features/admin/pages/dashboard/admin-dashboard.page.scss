@@ -1,0 +1,13 @@
+.admin-dashboard { max-width: 900px; margin: 0 auto; }
+.admin-title { font-size: 1.75rem; font-weight: 900; color: #fff; margin: 0 0 0.25rem; }
+.admin-sub { color: var(--color-text-muted, #888); margin: 0 0 2rem; font-size: 0.9rem; }
+.admin-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.25rem; }
+.admin-card {
+  display: flex; flex-direction: column; align-items: center; gap: 0.875rem;
+  padding: 2rem 1.5rem; background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+  text-decoration: none; transition: all 0.2s; cursor: pointer;
+}
+.admin-card:hover { border-color: rgba(255,50,0,0.3); transform: translateY(-2px); }
+.admin-card__icon { font-size: 2.5rem; }
+.admin-card__label { font-size: 1rem; font-weight: 700; color: #fff; }

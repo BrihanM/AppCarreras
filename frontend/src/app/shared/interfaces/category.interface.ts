@@ -7,6 +7,7 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
+  isActive?: boolean;
   createdAt: string;
 }
 
@@ -14,4 +15,5 @@ export interface Category {
 export interface CategoryPayload {
   name: string;
   description?: string;
+  is_active?: boolean;
 }

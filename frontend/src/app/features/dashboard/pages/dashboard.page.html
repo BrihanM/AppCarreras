@@ -21,8 +21,8 @@
         </h1>
         <div class="dashboard__quick-stats">
           <div class="quick-stat">
-            <span class="quick-stat__value">{{ facade.currentUser()?.points ?? 0 }}</span>
-            <span class="quick-stat__label">Puntos</span>
+            <span class="quick-stat__value">{{ facade.currentUser()?.rank ?? '-' }}</span>
+            <span class="quick-stat__label">Rango</span>
           </div>
           <div class="quick-stat">
             <span class="quick-stat__value">{{ facade.currentUser()?.wins ?? 0 }}</span>

@@ -1,0 +1,35 @@
+<div class="admin-page">
+  <h1 class="page-title">👥 Gestión de Usuarios</h1>
+  @if (isLoading()) {
+    <div class="list">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="row-skeleton">
+          <srx-skeleton width="40px" height="40px" borderRadius="50%" />
+          <div class="row-skeleton__info">
+            <srx-skeleton width="200px" height="14px" />
+            <srx-skeleton width="150px" height="12px" />
+          </div>
+          <srx-skeleton width="80px" height="30px" borderRadius="8px" />
+        </div>
+      }
+    </div>
+  } @else if (users().length === 0) {
+    <srx-empty-state icon="👥" title="Sin usuarios" message="No hay usuarios registrados." />
+  } @else {
+    <div class="list">
+      @for (user of users(); track user.id) {
+        <div class="user-row">
+          <div class="user-row__avatar">{{ user?.username?.charAt(0)?.toUpperCase() }}</div>
+          <div class="user-row__info">
+            <p class="user-row__name">{{ user.username }}</p>
+            <p class="user-row__email">{{ user.email }} · {{ user.role }}</p>
+          </div>
+          <div class="user-row__actions">
+            <span class="status-badge status-badge--{{ user.status }}">{{ user.status }}</span>
+            <button class="btn-danger" (click)="deleteUser(user.id)">Eliminar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

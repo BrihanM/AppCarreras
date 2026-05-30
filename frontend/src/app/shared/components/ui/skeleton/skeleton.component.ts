@@ -13,14 +13,7 @@ import { CommonModule } from '@angular/common';
   selector: 'srx-skeleton',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div
-      class="skeleton"
-      [style.width]="width"
-      [style.height]="height"
-      [style.borderRadius]="borderRadius"
-    ></div>
-  `,
+  templateUrl: './skeleton.component.html',
   styleUrls: ['./skeleton.component.scss'],
 })
 export class SkeletonComponent {

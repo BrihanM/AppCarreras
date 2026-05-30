@@ -1,0 +1,60 @@
+<div class="admin-page">
+  <div class="page-header">
+    <h1 class="page-title">📂 Categorías de Vehículos</h1>
+  </div>
+
+  <!-- Crear: abrir modal -->
+  <div class="create-form-top">
+    <button type="button" class="btn-primary" (click)="openCreateModal()">+ Crear</button>
+  </div>
+
+  @if (createModal()) {
+    <div class="modal-backdrop">
+      <div class="modal">
+        <h3>Crear Categoría</h3>
+        <form [formGroup]="form" (ngSubmit)="createCategory()">
+          <input class="form-input" formControlName="name" placeholder="Nombre de categoría..." />
+          <input class="form-input" formControlName="description" placeholder="Descripción (opcional)" />
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem">
+            <button type="button" class="btn-danger" (click)="closeCreateModal()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="form.invalid">Crear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Lista de categorías -->
+  @if (categories().length === 0) {
+    <srx-empty-state icon="📂" title="Sin categorías" message="Crea la primera categoría de vehículos." />
+  } @else {
+    <div class="list">
+      @for (cat of categories(); track cat.id) {
+        <div class="cat-row">
+          <div class="cat-row__info">
+            @if (editingId() === cat.id) {
+              <input class="form-input" [formControl]="editForm.controls['name']" />
+              <input class="form-input" [formControl]="editForm.controls['description']" />
+            } @else {
+              <p class="cat-row__name">{{ cat.name }}</p>
+              <p class="cat-row__desc">{{ cat.description ?? 'Sin descripción' }}</p>
+            }
+          </div>
+
+          @if (editingId() === cat.id) {
+            <div style="display:flex;gap:0.5rem">
+              <button class="btn-primary" (click)="saveEdit(cat.id)">Guardar</button>
+              <button class="btn-danger" (click)="cancelEdit()">Cancelar</button>
+            </div>
+          } @else {
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <button class="btn-primary" (click)="startEdit(cat)">Editar</button>
+              <button class="btn-danger" (click)="deleteCategory(cat.id)">Eliminar</button>
+              <button class="btn-primary" (click)="toggleActive(cat)">{{ cat.isActive ? 'Desactivar' : 'Activar' }}</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
