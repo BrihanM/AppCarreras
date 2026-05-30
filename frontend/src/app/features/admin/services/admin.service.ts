@@ -8,10 +8,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
-import { ApiResponse, PaginatedResponse, User } from '@shared/interfaces';
-import { Category, CategoryPayload } from '@shared/interfaces';
-import { Observable } from 'rxjs';
-import { ApiResponse, PaginatedResponse } from '@shared/interfaces';
+import { ApiResponse, PaginatedResponse, User, Category, CategoryPayload } from '@shared/interfaces';
+
 
 export interface CacheRule {
   id: string;
