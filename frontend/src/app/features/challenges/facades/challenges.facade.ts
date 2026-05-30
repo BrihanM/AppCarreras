@@ -42,6 +42,22 @@ export class ChallengesFacade {
     )
   );
 
+  /** Retos pendientes directos (solo entre usuarios involucrados). */
+  readonly pendingDirectChallenges = computed(() => {
+    const currentUserId = this.authService.currentUser()?.id;
+    return this.challenges().filter(
+      (c) =>
+        c.status === ChallengeStatus.Pending &&
+        !c.isOpen &&
+        (c.challengerId === currentUserId || c.challengedId === currentUserId)
+    );
+  });
+
+  /** Retos abiertos pendientes visibles en el feed. */
+  readonly pendingOpenChallenges = computed(() =>
+    this.challenges().filter((c) => c.status === ChallengeStatus.Pending && !!c.isOpen)
+  );
+
   /** Retos activos (aceptados). */
   readonly activeChallenges = computed(() =>
     this.challenges().filter((c) => c.status === ChallengeStatus.Accepted)
@@ -153,6 +169,8 @@ export class ChallengesFacade {
       challengerName: raw.challengerName || raw.challenger_name || '',
       challengedName: raw.challengedName || raw.challenged_name || '',
       status: (raw.status || raw.state) as any,
+      competitionCategoryId: raw.competitionCategoryId || raw.competition_category_id,
+      competitionCategoryName: raw.competitionCategoryName || raw.competition_category_name,
       careerType: raw.careerType || raw.career_type,
       challengerVehicleId: raw.challengerVehicleId || raw.challenger_vehicle_id,
       challengedVehicleId: raw.challengedVehicleId || raw.challenged_vehicle_id,
@@ -163,6 +181,7 @@ export class ChallengesFacade {
       agreedLocation: (raw as any).agreedLocation || raw.agreed_location,
       agreedDate: (raw as any).agreedDate || raw.agreed_date,
       notes: raw.notes,
+      route: raw.route,
       createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
       updatedAt: raw.updatedAt || raw.updated_at || new Date().toISOString(),
     } as Challenge;

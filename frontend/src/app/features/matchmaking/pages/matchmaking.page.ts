@@ -2,23 +2,26 @@
  * @fileoverview Página de Matchmaking.
  * Grid dinámico de pilotos disponibles con cards tipo social app.
  */
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 // RouterLink removed: not used in this template
 import { MatchmakingFacade } from '../facades/matchmaking.facade';
 import { SkeletonComponent } from '../../../shared/components/ui/skeleton/skeleton.component';
 import { EmptyStateComponent } from '../../../shared/components/ui/empty-state/empty-state.component';
-import { ChallengesService } from '../../challenges/services/challenges.service';
+import { ChallengesService, TrackOption } from '../../challenges/services/challenges.service';
 import { ToastService } from '@core/services/toast.service';
 import { User } from '@shared/interfaces';
 import { VehiclesService } from '@features/vehicles/services/vehicles.service';
 import { forkJoin } from 'rxjs';
+import { Category } from '@shared/interfaces/category.interface';
+import { RouteMapService } from '@core/services/route-map.service';
+import { RouteMapPreviewComponent } from '@shared/components/ui/route-map-preview/route-map-preview.component';
 
 @Component({
   selector: 'srx-matchmaking-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, SkeletonComponent, EmptyStateComponent],
+  imports: [CommonModule, FormsModule, SkeletonComponent, EmptyStateComponent, RouteMapPreviewComponent],
   templateUrl: './matchmaking.page.html',
   styleUrls: ['./matchmaking.page.scss'],
 })
@@ -27,6 +30,7 @@ export class MatchmakingPage implements OnInit {
   private readonly challengesService = inject(ChallengesService);
   private readonly toastService = inject(ToastService);
   private readonly vehiclesService = inject(VehiclesService);
+  private readonly routeMapService = inject(RouteMapService);
 
   cityFilter = '';
   challengedIds = new Set<string>();
@@ -35,16 +39,39 @@ export class MatchmakingPage implements OnInit {
   showChallengeModal = false;
   challengeMode: 'open' | 'direct' = 'direct';
   selectedPilot: User | null = null;
+  activeMyVehicle: any | null = null;
   myVehicles: any[] = [];
   directPilotVehicles: any[] = [];
+  competitionCategories: Category[] = [];
+  trackOptions: TrackOption[] = [];
+  selectedTrackId = '';
+  private trackRequestToken = 0;
+  isRouteLoading = false;
+  hasRoutePreview = false;
+  currentRouteUrl = '';
+  previewOriginLat: number | null = null;
+  previewOriginLng: number | null = null;
+  previewDestinationLat: number | null = null;
+  previewDestinationLng: number | null = null;
+  routePreviewGeometry: unknown = undefined;
+  routeSummary: { distanceKm: number; durationMin: number } | null = null;
+
+  @ViewChild(RouteMapPreviewComponent)
+  private routeMapPreview?: RouteMapPreviewComponent;
 
   challengeForm: any = {
-    career_type: '',
+    competition_category_id: '',
     challenger_vehicle_id: '',
     challenged_vehicle_id: '',
     agreed_location: '',
     agreed_date: '',
     notes: '',
+    route_origin_lat: '',
+    route_origin_lng: '',
+    route_destination_lat: '',
+    route_destination_lng: '',
+    route_geometry_text: '',
+    route_provider: 'map_api',
   };
 
   // Helpers used by the template to avoid calling global constructors in templates
@@ -76,6 +103,8 @@ export class MatchmakingPage implements OnInit {
 
   ngOnInit(): void {
     this.facade.loadPilots();
+    this.loadCompetitionCategories();
+    this.loadTrackOptions();
     // Load my active challenges to disable challenge button for existing active opponents
     this.challengesService.getMyChallenges().subscribe({
       next: (res) => {
@@ -99,8 +128,10 @@ export class MatchmakingPage implements OnInit {
     this.challengeMode = 'open';
     this.selectedPilot = null;
     this.resetChallengeForm();
-    this.loadVehiclesForForm();
-    this.showChallengeModal = true;
+    setTimeout(() => {
+      this.showChallengeModal = true;
+      setTimeout(() => this.loadVehiclesForForm(), 0);
+    }, 0);
   }
 
   openDirectChallengeModal(pilot: User): void {
@@ -113,25 +144,149 @@ export class MatchmakingPage implements OnInit {
     this.challengeMode = 'direct';
     this.selectedPilot = pilot;
     this.resetChallengeForm();
-    this.loadVehiclesForForm(pilot);
-    this.showChallengeModal = true;
+    setTimeout(() => {
+      this.showChallengeModal = true;
+      setTimeout(() => this.loadVehiclesForForm(pilot), 0);
+    }, 0);
   }
 
   closeChallengeModal(): void {
+    this.trackRequestToken += 1;
     this.showChallengeModal = false;
     this.selectedPilot = null;
     this.directPilotVehicles = [];
+    this.routeSummary = null;
+    this.routePreviewGeometry = undefined;
+    this.isRouteLoading = false;
+    this.hasRoutePreview = false;
+    this.currentRouteUrl = '';
+    this.previewOriginLat = null;
+    this.previewOriginLng = null;
+    this.previewDestinationLat = null;
+    this.previewDestinationLng = null;
+    this.selectedTrackId = '';
   }
 
   private resetChallengeForm(): void {
+    this.trackRequestToken += 1;
+    this.selectedTrackId = '';
     this.challengeForm = {
-      career_type: '',
+      competition_category_id: '',
       challenger_vehicle_id: '',
       challenged_vehicle_id: '',
       agreed_location: '',
       agreed_date: '',
       notes: '',
+      route_origin_lat: '',
+      route_origin_lng: '',
+      route_destination_lat: '',
+      route_destination_lng: '',
+      route_geometry_text: '',
+      route_provider: 'map_api',
     };
+    this.routeSummary = null;
+    this.routePreviewGeometry = undefined;
+    this.isRouteLoading = false;
+    this.hasRoutePreview = false;
+    this.currentRouteUrl = '';
+    this.previewOriginLat = null;
+    this.previewOriginLng = null;
+    this.previewDestinationLat = null;
+    this.previewDestinationLng = null;
+  }
+
+  hasRoutePreviewData(): boolean {
+    const rawValues = [
+      this.challengeForm.route_origin_lat,
+      this.challengeForm.route_origin_lng,
+      this.challengeForm.route_destination_lat,
+      this.challengeForm.route_destination_lng,
+    ];
+    if (rawValues.some((v) => v === '' || v === null || v === undefined)) return false;
+
+    const values = rawValues.map((v) => Number(v));
+    return values.every((v) => !Number.isNaN(v));
+  }
+
+  getRoutePreviewGeometry(): unknown {
+    return this.routePreviewGeometry;
+  }
+
+  onTrackOptionChange(): void {
+    const selected = this.trackOptions.find((t) => t.id === this.selectedTrackId);
+    if (!selected) {
+      this.challengeForm.agreed_location = '';
+      this.challengeForm.route_origin_lat = '';
+      this.challengeForm.route_origin_lng = '';
+      this.challengeForm.route_destination_lat = '';
+      this.challengeForm.route_destination_lng = '';
+      this.challengeForm.route_geometry_text = '';
+      this.routePreviewGeometry = undefined;
+      this.challengeForm.route_provider = 'db_track';
+      this.routeSummary = null;
+      this.isRouteLoading = false;
+      this.hasRoutePreview = false;
+      this.currentRouteUrl = '';
+      this.previewOriginLat = null;
+      this.previewOriginLng = null;
+      this.previewDestinationLat = null;
+      this.previewDestinationLng = null;
+      return;
+    }
+
+    const originLat = Number(selected.route.origin_lat);
+    const originLng = Number(selected.route.origin_lng);
+    const destinationLat = Number(selected.route.destination_lat);
+    const destinationLng = Number(selected.route.destination_lng);
+
+    this.challengeForm.agreed_location = selected.locationName;
+    this.challengeForm.route_origin_lat = String(originLat);
+    this.challengeForm.route_origin_lng = String(originLng);
+    this.challengeForm.route_destination_lat = String(destinationLat);
+    this.challengeForm.route_destination_lng = String(destinationLng);
+    this.challengeForm.route_provider = selected.route.provider || 'db_track';
+    this.currentRouteUrl = this.routeMapService.buildDirectionsUrl(originLat, originLng, destinationLat, destinationLng);
+    this.previewOriginLat = originLat;
+    this.previewOriginLng = originLng;
+    this.previewDestinationLat = destinationLat;
+    this.previewDestinationLng = destinationLng;
+    this.hasRoutePreview = true;
+    // Avoid flashing a simplified DB polyline before we fetch real street geometry.
+    this.challengeForm.route_geometry_text = '';
+    this.routePreviewGeometry = undefined;
+    this.routeSummary = null;
+    this.isRouteLoading = false;
+
+    if (!this.challengeForm.competition_category_id && selected.competitionCategoryId) {
+      this.challengeForm.competition_category_id = selected.competitionCategoryId;
+    }
+
+    this.routeMapPreview?.refreshMapView();
+  }
+
+  private loadTrackOptions(): void {
+    this.challengesService.getTrackOptions().subscribe({
+      next: (res: any) => {
+        this.trackOptions = res?.data || [];
+      },
+      error: () => {
+        this.trackOptions = [];
+        this.toastService.error('No se pudieron cargar las pistas predefinidas.');
+      },
+    });
+  }
+
+  private loadCompetitionCategories(): void {
+    this.challengesService.getActiveCompetitionCategories().subscribe({
+      next: (res: any) => {
+        const items = res?.data || [];
+        this.competitionCategories = items.filter((c: any) => c.is_active !== false);
+      },
+      error: () => {
+        this.competitionCategories = [];
+        this.toastService.error('No se pudieron cargar las categorías de carrera.');
+      },
+    });
   }
 
   private loadVehiclesForForm(pilot?: User): void {
@@ -140,13 +295,16 @@ export class MatchmakingPage implements OnInit {
 
     forkJoin(reqs).subscribe({
       next: ({ me, other }: any) => {
-        this.myVehicles = me?.data || [];
-        const activeMine = this.myVehicles.find((v: any) => v.active) || this.myVehicles[0];
-        this.challengeForm.challenger_vehicle_id = activeMine?.id || '';
+        setTimeout(() => {
+          this.myVehicles = me?.data || [];
+          const activeMine = this.myVehicles.find((v: any) => v.active) || null;
+          this.activeMyVehicle = activeMine;
+          this.challengeForm.challenger_vehicle_id = activeMine?.id || '';
 
-        this.directPilotVehicles = other?.data || [];
-        const activeOther = this.directPilotVehicles.find((v: any) => v.active) || this.directPilotVehicles[0];
-        this.challengeForm.challenged_vehicle_id = activeOther?.id || '';
+          this.directPilotVehicles = other?.data || [];
+          const activeOther = this.directPilotVehicles.find((v: any) => v.active) || this.directPilotVehicles[0];
+          this.challengeForm.challenged_vehicle_id = activeOther?.id || '';
+        }, 0);
       },
       error: () => this.toastService.error('No se pudieron cargar los vehículos para el reto.'),
     });
@@ -155,19 +313,53 @@ export class MatchmakingPage implements OnInit {
   submitChallengeForm(): void {
     const current = this.facade.authService.currentUser();
     if (!current) { this.toastService.error('Usuario no autenticado'); return; }
-    if (!this.challengeForm.challenger_vehicle_id) { this.toastService.error('Selecciona tu vehículo para crear el reto.'); return; }
+    if (!this.challengeForm.challenger_vehicle_id) { this.toastService.error('Debes activar un vehículo para crear el reto.'); return; }
+    if (!this.challengeForm.competition_category_id) { this.toastService.error('Selecciona la categoría de carrera.'); return; }
 
     if (this.challengeMode === 'direct' && !this.selectedPilot) {
       this.toastService.error('Selecciona un piloto para el reto directo.');
       return;
     }
 
+    let parsedGeometry: unknown;
+    if (this.challengeForm.route_geometry_text) {
+      try {
+        parsedGeometry = JSON.parse(this.challengeForm.route_geometry_text);
+      } catch {
+        this.toastService.error('El JSON de ruta no es válido.');
+        return;
+      }
+    }
+
+    const hasCoords =
+      this.challengeForm.route_origin_lat !== '' &&
+      this.challengeForm.route_origin_lng !== '' &&
+      this.challengeForm.route_destination_lat !== '' &&
+      this.challengeForm.route_destination_lng !== '';
+
+    const route = hasCoords
+      ? {
+          origin_lat: Number(this.challengeForm.route_origin_lat),
+          origin_lng: Number(this.challengeForm.route_origin_lng),
+          destination_lat: Number(this.challengeForm.route_destination_lat),
+          destination_lng: Number(this.challengeForm.route_destination_lng),
+          route_geometry: parsedGeometry,
+          provider: this.challengeForm.route_provider || 'map_api',
+        }
+      : undefined;
+
+    if (route && [route.origin_lat, route.origin_lng, route.destination_lat, route.destination_lng].some((n) => Number.isNaN(n))) {
+      this.toastService.error('Las coordenadas de la ruta deben ser numéricas.');
+      return;
+    }
+
     const payload: any = {
       challenger_vehicle_id: String(this.challengeForm.challenger_vehicle_id),
-      career_type: this.challengeForm.career_type || undefined,
+      competition_category_id: String(this.challengeForm.competition_category_id),
       agreed_location: this.challengeForm.agreed_location || undefined,
       agreed_date: this.challengeForm.agreed_date || undefined,
       notes: this.challengeForm.notes || undefined,
+      route,
     };
 
     if (this.challengeMode === 'direct' && this.selectedPilot) {
@@ -179,12 +371,15 @@ export class MatchmakingPage implements OnInit {
 
     this.challengesService.createChallenge(payload).subscribe({
       next: () => {
+        const successMessage = this.challengeMode === 'open' ? 'Reto abierto creado.' : 'Reto directo creado.';
         if (this.challengeMode === 'direct' && this.selectedPilot) {
           this.challengedIds.add(String(this.selectedPilot.id));
           this.activeOpponentIds.add(String(this.selectedPilot.id));
         }
-        this.toastService.success(this.challengeMode === 'open' ? 'Reto abierto creado.' : 'Reto directo creado.');
-        this.closeChallengeModal();
+        setTimeout(() => {
+          this.closeChallengeModal();
+          this.toastService.success(successMessage);
+        }, 0);
       },
       error: (err: any) => {
         const serverErr = err?.error;

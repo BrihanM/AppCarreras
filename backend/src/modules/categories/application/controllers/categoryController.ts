@@ -12,7 +12,9 @@ const service = new CategoryService(repo);
  */
 const list = async (_req: Request, res: Response) => {
   try {
-    const items = await service.listCategories();
+    const onlyActive = String(_req.query.active || '').toLowerCase() === 'true';
+    const allItems = await service.listCategories();
+    const items = onlyActive ? allItems.filter((it: any) => Boolean(it.is_active)) : allItems;
     // Return paginated-style envelope to match frontend expectations
     const pagination = { page: 1, limit: items.length, total: items.length, totalPages: 1 };
     res.json({ success: true, message: 'Categories listed', data: items, pagination });

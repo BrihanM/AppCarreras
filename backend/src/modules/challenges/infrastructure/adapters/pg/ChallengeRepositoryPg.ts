@@ -11,12 +11,13 @@ class ChallengeRepositoryPg implements IChallengeRepository {
    * Inserta un nuevo challenge.
    */
   async create(c: Partial<Challenge>): Promise<Challenge> {
-    const q = `INSERT INTO challenges (id, challenger_id, challenged_id, career_type, challenger_vehicle_id, challenged_vehicle_id, state, winner_id, agreed_location, agreed_date, notes)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`;
+    const q = `INSERT INTO challenges (id, challenger_id, challenged_id, competition_category_id, career_type, challenger_vehicle_id, challenged_vehicle_id, state, winner_id, agreed_location, agreed_date, notes)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`;
     const values = [
       c.id,
       c.challenger_id,
       c.challenged_id,
+      c.competition_category_id || null,
       c.career_type || null,
       c.challenger_vehicle_id,
       c.challenged_vehicle_id,
@@ -57,8 +58,9 @@ class ChallengeRepositoryPg implements IChallengeRepository {
           challenged_id=$6,
           challenged_vehicle_id=$7,
           career_type=$8,
+          competition_category_id=$9,
           updated_at=NOW()
-      WHERE id=$9
+      WHERE id=$10
       RETURNING *
     `;
     const values = [
@@ -70,6 +72,7 @@ class ChallengeRepositoryPg implements IChallengeRepository {
       updated.challenged_id || null,
       updated.challenged_vehicle_id || null,
       updated.career_type || null,
+      updated.competition_category_id || null,
       id,
     ];
     const { rows } = await pool.query(q, values);

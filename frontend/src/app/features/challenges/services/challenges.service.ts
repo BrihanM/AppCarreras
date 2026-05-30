@@ -14,6 +14,22 @@ import {
   CreateChallengePayload,
   CompleteChallengePayload,
 } from '@shared/interfaces';
+import { Category } from '@shared/interfaces/category.interface';
+
+export interface TrackOption {
+  id: string;
+  locationName: string;
+  competitionCategoryId?: string;
+  competitionCategoryName?: string;
+  route: {
+    origin_lat: number;
+    origin_lng: number;
+    destination_lat: number;
+    destination_lng: number;
+    route_geometry?: unknown;
+    provider?: string;
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class ChallengesService {
@@ -24,6 +40,16 @@ export class ChallengesService {
   /** Lista todos los retos del usuario autenticado. */
   getMyChallenges(): Observable<PaginatedResponse<Challenge>> {
     return this.http.get<PaginatedResponse<Challenge>>(this.base);
+  }
+
+  /** Lista categorías activas para tipo de carrera. */
+  getActiveCompetitionCategories(): Observable<PaginatedResponse<Category>> {
+    return this.http.get<PaginatedResponse<Category>>(`${environment.apiUrl}/categories?active=true`);
+  }
+
+  /** Lista pistas/rutas predefinidas disponibles para crear retos. */
+  getTrackOptions(): Observable<ApiResponse<TrackOption[]>> {
+    return this.http.get<ApiResponse<TrackOption[]>>(`${this.base}/tracks`);
   }
 
   /**

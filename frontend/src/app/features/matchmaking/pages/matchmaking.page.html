@@ -94,29 +94,30 @@
   }
 </div>
 
-@if (showChallengeModal) {
-  <div class="challenge-modal-backdrop" (click)="closeChallengeModal()">
-    <div class="challenge-modal" (click)="$event.stopPropagation()">
-      <div class="challenge-modal__header">
-        <h2>
-          @if (challengeMode === 'open') {
-            Crear reto abierto
-          } @else {
-            Retar a {{ selectedPilot?.username }}
-          }
-        </h2>
-        <button class="btn btn--sm" (click)="closeChallengeModal()">Cerrar</button>
-      </div>
+<div class="challenge-modal-backdrop" [class.challenge-modal-backdrop--open]="showChallengeModal" (click)="closeChallengeModal()">
+  <div class="challenge-modal" (click)="$event.stopPropagation()">
+    <div class="challenge-modal__header">
+      <h2>
+        @if (challengeMode === 'open') {
+          Crear reto abierto
+        } @else {
+          Retar a {{ selectedPilot?.username }}
+        }
+      </h2>
+      <button class="btn btn--sm" (click)="closeChallengeModal()">Cerrar</button>
+    </div>
 
-      <div class="challenge-form-grid">
+    <div class="challenge-form-grid">
         <div class="form-group">
-          <label>Tu vehículo</label>
-          <select class="filter-input" [(ngModel)]="challengeForm.challenger_vehicle_id">
-            <option value="">Selecciona tu vehículo</option>
-            @for (v of myVehicles; track v.id) {
-              <option [value]="v.id">{{ v.make }} {{ v.model }} · {{ v.plate }}</option>
+          <label>Tu vehículo activo</label>
+          <div class="vehicle-auto-selected">
+            @if (activeMyVehicle) {
+              <strong>{{ activeMyVehicle.make }} {{ activeMyVehicle.model }}</strong>
+              <span>· {{ activeMyVehicle.plate }}</span>
+            } @else {
+              <span>No tienes vehículo activo. Activa uno en Mis Vehículos.</span>
             }
-          </select>
+          </div>
         </div>
 
         @if (challengeMode === 'direct') {
@@ -132,13 +133,59 @@
         }
 
         <div class="form-group">
-          <label>Tipo de carrera (`career_type`)</label>
-          <input class="filter-input" type="text" [(ngModel)]="challengeForm.career_type" placeholder="street, drag, etc." />
+          <label>Tipo de carrera (competition_categories)</label>
+          <select class="filter-input" [(ngModel)]="challengeForm.competition_category_id">
+            <option value="">Selecciona una categoría</option>
+            @for (cat of competitionCategories; track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
         </div>
 
         <div class="form-group">
-          <label>Ubicación (`agreed_location`)</label>
-          <input class="filter-input" type="text" [(ngModel)]="challengeForm.agreed_location" placeholder="Old Bridge" />
+          <label>Pista / ubicación predefinida</label>
+          <select class="filter-input" [(ngModel)]="selectedTrackId" (change)="onTrackOptionChange()">
+            <option value="">Selecciona una pista</option>
+            @for (track of trackOptions; track track.id) {
+              <option [value]="track.id">
+                {{ track.locationName }}
+                @if (track.competitionCategoryName) {
+                  · {{ track.competitionCategoryName }}
+                }
+              </option>
+            }
+          </select>
+          @if (trackOptions.length === 0) {
+            <small class="track-hint">No hay pistas cargadas en la base de datos.</small>
+          }
+        </div>
+
+        <div class="form-group form-group--full form-group--route">
+          <label>Ruta de la pista seleccionada</label>
+          @if (hasRoutePreview) {
+            <div class="route-coordinates-readonly">
+              <span>Origen: {{ previewOriginLat }}, {{ previewOriginLng }}</span>
+              <span>Destino: {{ previewDestinationLat }}, {{ previewDestinationLng }}</span>
+            </div>
+          }
+          <div class="route-actions">
+            @if (currentRouteUrl) {
+              <a class="route-link" [attr.href]="currentRouteUrl" target="_blank" rel="noopener">Ver ruta en mapa</a>
+            }
+          </div>
+          @if (hasRoutePreview) {
+            <div class="route-preview-map">
+              <srx-route-map-preview
+                [originLat]="previewOriginLat!"
+                [originLng]="previewOriginLng!"
+                [destinationLat]="previewDestinationLat!"
+                [destinationLng]="previewDestinationLng!"
+                [geometry]="routePreviewGeometry"
+                [showFallbackLine]="false"
+                [height]="260"
+              />
+            </div>
+          }
         </div>
 
         <div class="form-group">
@@ -150,13 +197,12 @@
           <label>Notas (`notes`)</label>
           <textarea class="filter-input" rows="3" [(ngModel)]="challengeForm.notes" placeholder="Detalles del reto"></textarea>
         </div>
-      </div>
+    </div>
 
-      <div class="challenge-modal__actions">
-        <button class="btn btn--primary" (click)="submitChallengeForm()">
-          @if (challengeMode === 'open') { Publicar reto abierto } @else { Enviar reto directo }
-        </button>
-      </div>
+    <div class="challenge-modal__actions">
+      <button class="btn btn--primary" (click)="submitChallengeForm()">
+        @if (challengeMode === 'open') { Publicar reto abierto } @else { Enviar reto directo }
+      </button>
     </div>
   </div>
-}
+</div>

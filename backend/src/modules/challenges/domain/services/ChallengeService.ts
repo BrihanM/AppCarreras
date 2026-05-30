@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import UserRepositoryPg from '../../../users/infrastructure/adapters/pg/UserRepositoryPg';
 import NotificationRepositoryPg from '../../../notifications/infrastructure/adapters/pg/NotificationRepositoryPg';
 import { getIo } from '../../../../socket';
+import { pool } from '../../infrastructure/db';
 
 
 /**
@@ -52,6 +53,18 @@ class ChallengeService {
       id,
       state: 'pending',
     };
+
+    // If a competition category is provided, enforce active category and normalize career_type from DB.
+    if (toCreate.competition_category_id) {
+      const categoryRes = await pool.query(
+        'SELECT id, name, is_active FROM competition_categories WHERE id = $1 LIMIT 1',
+        [toCreate.competition_category_id]
+      );
+      const category = categoryRes.rows[0];
+      if (!category) throw new Error('Competition category not found');
+      if (!category.is_active) throw new Error('Competition category is not active');
+      toCreate.career_type = category.name;
+    }
     // Business rule: challenger must exist
     const userRepo = new UserRepositoryPg();
     const challenger = await userRepo.findById(toCreate.challenger_id!);
@@ -69,6 +82,39 @@ class ChallengeService {
     }
 
     const created = await this.repo.create(toCreate);
+
+    // Persist route metadata for map API replay when provided.
+    const route = (attrs as any).route;
+    if (route) {
+      await pool.query(
+        `INSERT INTO challenge_routes (
+          challenge_id,
+          origin_lat,
+          origin_lng,
+          destination_lat,
+          destination_lng,
+          route_geometry,
+          provider
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        ON CONFLICT (challenge_id) DO UPDATE
+        SET origin_lat = EXCLUDED.origin_lat,
+            origin_lng = EXCLUDED.origin_lng,
+            destination_lat = EXCLUDED.destination_lat,
+            destination_lng = EXCLUDED.destination_lng,
+            route_geometry = EXCLUDED.route_geometry,
+            provider = EXCLUDED.provider,
+            updated_at = NOW()`,
+        [
+          created.id,
+          route.origin_lat,
+          route.origin_lng,
+          route.destination_lat,
+          route.destination_lng,
+          route.route_geometry ?? null,
+          route.provider ?? null,
+        ]
+      );
+    }
 
     const notifRepo = new NotificationRepositoryPg();
     try {

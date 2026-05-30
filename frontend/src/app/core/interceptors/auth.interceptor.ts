@@ -24,12 +24,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   const token = storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
+  const isApiRequest = req.url.startsWith(environment.apiUrl) || req.url.startsWith('/api/');
 
-  const authReq = token
+  const authReq = token && isApiRequest
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
+      if (!isApiRequest) {
+        return throwError(() => error);
+      }
+
       // If 401, try to rotate refresh token once (skip for auth endpoints)
       if (error.status === 401 && !req.url.includes('/auth/refresh') && !req.url.includes('/auth/login')) {
         // call refresh endpoint via fetch to include cookie (refreshToken) and avoid interceptor recursion

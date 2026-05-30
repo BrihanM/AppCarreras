@@ -71,6 +71,8 @@ app.use(cookieAuth(true));
 app.use('/api', (req, res, next) => {
   // permitir acceso no autenticado a los endpoints de autenticación (/api/auth/*)
   if (req.path && req.path.startsWith('/auth')) return next();
+  // permitir tiles de mapa sin autenticación
+  if (req.path && req.path.startsWith('/maps/tiles')) return next();
   // permitir crear cuentas y usuarios sin autenticación
   if (req.method === 'POST' && (req.path === '/accounts' || req.path === '/users')) return next();
   // permitir si cookieAuth pobló req.user
@@ -96,6 +98,63 @@ app.use('/api', challengesRoutes);
 app.use('/api', notificationsRoutes);
 app.use('/api', categoriesRoutes);
 app.use('/api', cacheRoutes);
+
+app.get('/api/maps/tiles/:provider/:z/:x/:y.png', async (req, res) => {
+  try {
+    const provider = String(req.params.provider || '').toLowerCase();
+    const z = Number(req.params.z);
+    const x = Number(req.params.x);
+    const y = Number(req.params.y);
+
+    if (!Number.isInteger(z) || !Number.isInteger(x) || !Number.isInteger(y)) {
+      return res.status(400).send('Invalid tile coordinates');
+    }
+
+    const providers: Record<string, string> = {
+      osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      wikimedia: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+      osmde: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
+    };
+
+    const template = providers[provider];
+    if (!template) {
+      return res.status(400).send('Unsupported tile provider');
+    }
+
+    const targetUrl = template
+      .replace('{z}', String(z))
+      .replace('{x}', String(x))
+      .replace('{y}', String(y));
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const upstream = await fetch(targetUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'AppCarrerasMapProxy/1.0',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      },
+    });
+    clearTimeout(timeout);
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).send('Tile upstream error');
+    }
+
+    const arrayBuffer = await upstream.arrayBuffer();
+    const tileBuffer = Buffer.from(arrayBuffer);
+    const contentType = upstream.headers.get('content-type') || 'image/png';
+    const cacheControl = upstream.headers.get('cache-control') || 'public, max-age=300';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', cacheControl);
+    return res.status(200).send(tileBuffer);
+  } catch (err) {
+    return res.status(502).send('Tile proxy failed');
+  }
+});
 
 // Socket.io
 /**

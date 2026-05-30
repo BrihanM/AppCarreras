@@ -153,10 +153,42 @@ button, input, textarea, select {
   font-family: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #0f1720;
+  color: #f8fafc;
+}
+
 img {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* Leaflet compatibility: prevent global img reset from distorting tile layers. */
+.leaflet-container img,
+.leaflet-container .leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-container {
+  background: #0b1119;
+}
+
+.leaflet-container,
+.leaflet-container .leaflet-pane,
+.leaflet-container .leaflet-map-pane,
+.leaflet-container .leaflet-tile-pane,
+.leaflet-container .leaflet-tile,
+.leaflet-container .leaflet-tile-container {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 // ─── Utilidades globales ───────────────────────────────────────

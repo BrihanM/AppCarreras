@@ -8,8 +8,8 @@
   <div class="tabs">
     <button class="tab" [class.tab--active]="activeTab === 'pending'" (click)="setTab('pending')">
       Pendientes
-      @if (facade.pendingChallenges().length > 0) {
-        <span class="tab__badge">{{ facade.pendingChallenges().length }}</span>
+      @if (facade.pendingDirectChallenges().length + facade.pendingOpenChallenges().length > 0) {
+        <span class="tab__badge">{{ facade.pendingDirectChallenges().length + facade.pendingOpenChallenges().length }}</span>
       }
     </button>
     <button class="tab" [class.tab--active]="activeTab === 'active'" (click)="setTab('active')">
@@ -41,50 +41,150 @@
 
     <!-- Tab: Pendientes -->
     @if (activeTab === 'pending') {
-      @if (facade.pendingChallenges().length === 0) {
+      @if (facade.pendingDirectChallenges().length === 0 && facade.pendingOpenChallenges().length === 0) {
         <srx-empty-state icon="⏳" title="Sin retos pendientes" message="No tienes retos esperando tu respuesta." />
       } @else {
-        <div class="challenge-list">
-          @for (challenge of facade.pendingChallenges(); track challenge.id) {
-            <div class="challenge-item challenge-item--pending">
-              <div class="challenge-item__avatar">
-                {{ challenge?.challengerName?.charAt(0)?.toUpperCase() }}
-              </div>
-              <div class="challenge-item__info">
-                @if (challenge.isOpen) {
-                  <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> publicó un reto abierto</p>
-                } @else {
-                  <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> te ha retado</p>
-                }
-                @if (challenge.careerType) {
-                  <p class="challenge-item__date">Tipo: {{ challenge.careerType }}</p>
-                }
-                @if (challenge.agreedLocation) {
-                  <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
-                }
-                @if (challenge.agreedDate) {
-                  <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>
-                }
-                @if (challenge.notes) {
-                  <p class="challenge-item__date">Notas: {{ challenge.notes }}</p>
-                }
-                <p class="challenge-item__date">{{ challenge.createdAt | date:'dd MMM yyyy · HH:mm' }}</p>
-              </div>
-              <div class="challenge-item__actions">
-                @if (challenge.challengerId !== currentUserId) {
-                  <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
-                    {{ challenge.isOpen ? '⚡ Participar' : '✓ Aceptar' }}
-                  </button>
-                }
-                @if (!challenge.isOpen && challenge.challengerId !== currentUserId) {
-                  <button class="btn btn--danger btn--sm" (click)="facade.rejectChallenge(challenge.id)">
-                    ✕ Rechazar
-                  </button>
-                }
-              </div>
+        <div class="pending-subtabs">
+          <button class="pending-subtab" [class.pending-subtab--active]="pendingTab === 'direct'" (click)="setPendingTab('direct')">
+            Directos
+            @if (facade.pendingDirectChallenges().length > 0) {
+              <span class="pending-subtab__badge">{{ facade.pendingDirectChallenges().length }}</span>
+            }
+          </button>
+          <button class="pending-subtab" [class.pending-subtab--active]="pendingTab === 'open'" (click)="setPendingTab('open')">
+            Abiertos
+            @if (facade.pendingOpenChallenges().length > 0) {
+              <span class="pending-subtab__badge">{{ facade.pendingOpenChallenges().length }}</span>
+            }
+          </button>
+        </div>
+
+        @if (pendingTab === 'direct') {
+          @if (facade.pendingDirectChallenges().length === 0) {
+            <p class="challenge-section__empty">No hay retos directos pendientes.</p>
+          } @else {
+            <div class="challenge-list">
+              @for (challenge of facade.pendingDirectChallenges(); track challenge.id) {
+                <div class="challenge-item challenge-item--pending">
+                  <div class="challenge-item__avatar">
+                    {{ challenge?.challengerName?.charAt(0)?.toUpperCase() }}
+                  </div>
+                  <div class="challenge-item__info">
+                    <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> te ha retado</p>
+                    @if (challenge.careerType) {
+                      <p class="challenge-item__date">Tipo: {{ challenge.careerType }}</p>
+                    }
+                    @if (challenge.competitionCategoryName) {
+                      <p class="challenge-item__date">Categoría: {{ challenge.competitionCategoryName }}</p>
+                    }
+                    @if (challenge.agreedLocation) {
+                      <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
+                    }
+                    @if (challenge.route) {
+                      <p class="challenge-item__date">
+                        Ruta: ({{ challenge.route.origin_lat }}, {{ challenge.route.origin_lng }}) →
+                        ({{ challenge.route.destination_lat }}, {{ challenge.route.destination_lng }})
+                      </p>
+                      <p class="challenge-item__date">
+                        <a [href]="getRouteUrl(challenge)" target="_blank" rel="noopener">Ver ruta en mapa</a>
+                      </p>
+                      @if (hasValidRouteCoords(challenge)) {
+                        <div class="challenge-route-map">
+                          <srx-route-map-preview
+                            [originLat]="challenge.route.origin_lat"
+                            [originLng]="challenge.route.origin_lng"
+                            [destinationLat]="challenge.route.destination_lat"
+                            [destinationLng]="challenge.route.destination_lng"
+                            [geometry]="challenge.route.route_geometry"
+                            [height]="190"
+                          />
+                        </div>
+                      }
+                    }
+                    @if (challenge.agreedDate) {
+                      <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>
+                    }
+                    @if (challenge.notes) {
+                      <p class="challenge-item__date">Notas: {{ challenge.notes }}</p>
+                    }
+                    <p class="challenge-item__date">{{ challenge.createdAt | date:'dd MMM yyyy · HH:mm' }}</p>
+                  </div>
+                  <div class="challenge-item__actions">
+                    @if (challenge.challengerId !== currentUserId) {
+                      <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
+                        ✓ Aceptar
+                      </button>
+                      <button class="btn btn--danger btn--sm" (click)="facade.rejectChallenge(challenge.id)">
+                        ✕ Rechazar
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           }
-        </div>
+        } @else {
+          @if (facade.pendingOpenChallenges().length === 0) {
+            <p class="challenge-section__empty">No hay retos abiertos disponibles.</p>
+          } @else {
+            <div class="challenge-list">
+              @for (challenge of facade.pendingOpenChallenges(); track challenge.id) {
+                <div class="challenge-item challenge-item--pending">
+                  <div class="challenge-item__avatar">
+                    {{ challenge?.challengerName?.charAt(0)?.toUpperCase() }}
+                  </div>
+                  <div class="challenge-item__info">
+                    <p class="challenge-item__title"><strong>{{ challenge.challengerName }}</strong> publicó un reto abierto</p>
+                    @if (challenge.careerType) {
+                      <p class="challenge-item__date">Tipo: {{ challenge.careerType }}</p>
+                    }
+                    @if (challenge.competitionCategoryName) {
+                      <p class="challenge-item__date">Categoría: {{ challenge.competitionCategoryName }}</p>
+                    }
+                    @if (challenge.agreedLocation) {
+                      <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
+                    }
+                    @if (challenge.route) {
+                      <p class="challenge-item__date">
+                        Ruta: ({{ challenge.route.origin_lat }}, {{ challenge.route.origin_lng }}) →
+                        ({{ challenge.route.destination_lat }}, {{ challenge.route.destination_lng }})
+                      </p>
+                      <p class="challenge-item__date">
+                        <a [href]="getRouteUrl(challenge)" target="_blank" rel="noopener">Ver ruta en mapa</a>
+                      </p>
+                      @if (hasValidRouteCoords(challenge)) {
+                        <div class="challenge-route-map">
+                          <srx-route-map-preview
+                            [originLat]="challenge.route.origin_lat"
+                            [originLng]="challenge.route.origin_lng"
+                            [destinationLat]="challenge.route.destination_lat"
+                            [destinationLng]="challenge.route.destination_lng"
+                            [geometry]="challenge.route.route_geometry"
+                            [height]="190"
+                          />
+                        </div>
+                      }
+                    }
+                    @if (challenge.agreedDate) {
+                      <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>
+                    }
+                    @if (challenge.notes) {
+                      <p class="challenge-item__date">Notas: {{ challenge.notes }}</p>
+                    }
+                    <p class="challenge-item__date">{{ challenge.createdAt | date:'dd MMM yyyy · HH:mm' }}</p>
+                  </div>
+                  <div class="challenge-item__actions">
+                    @if (challenge.challengerId !== currentUserId) {
+                      <button class="btn btn--success btn--sm" (click)="facade.acceptChallenge(challenge.id)">
+                        ⚡ Participar
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
       }
     }
 
@@ -106,6 +206,27 @@
                 }
                 @if (challenge.agreedLocation) {
                   <p class="challenge-item__date">Lugar: {{ challenge.agreedLocation }}</p>
+                }
+                @if (challenge.route) {
+                  <p class="challenge-item__date">
+                    Ruta: ({{ challenge.route.origin_lat }}, {{ challenge.route.origin_lng }}) →
+                    ({{ challenge.route.destination_lat }}, {{ challenge.route.destination_lng }})
+                  </p>
+                  <p class="challenge-item__date">
+                    <a [href]="getRouteUrl(challenge)" target="_blank" rel="noopener">Ver ruta en mapa</a>
+                  </p>
+                  @if (hasValidRouteCoords(challenge)) {
+                    <div class="challenge-route-map">
+                      <srx-route-map-preview
+                        [originLat]="challenge.route.origin_lat"
+                        [originLng]="challenge.route.origin_lng"
+                        [destinationLat]="challenge.route.destination_lat"
+                        [destinationLng]="challenge.route.destination_lng"
+                        [geometry]="challenge.route.route_geometry"
+                        [height]="190"
+                      />
+                    </div>
+                  }
                 }
                 @if (challenge.agreedDate) {
                   <p class="challenge-item__date">Fecha: {{ challenge.agreedDate | date:'dd MMM yyyy' }}</p>

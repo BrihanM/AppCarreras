@@ -3,6 +3,7 @@ import challengeController from './controllers/challengeController';
 
 const router = Router();
 
+router.get('/challenges/tracks', challengeController.listTrackOptions);
 router.get('/challenges', challengeController.list);
 router.post('/challenges', challengeController.create);
 router.patch('/challenges/:id/accept', challengeController.accept);

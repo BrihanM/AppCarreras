@@ -1,0 +1,12 @@
+<div class="route-map-preview" [class.route-map-preview--dark]="darkMode" [style.height.px]="height">
+  @if (mapEmbedUrl) {
+    <iframe
+      class="route-map-preview__iframe"
+      [src]="mapEmbedUrl"
+      title="Vista previa de ruta"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      allowfullscreen>
+    </iframe>
+  }
+</div>

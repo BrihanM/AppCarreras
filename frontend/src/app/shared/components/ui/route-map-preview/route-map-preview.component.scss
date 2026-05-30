@@ -1,0 +1,19 @@
+.route-map-preview {
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b1119;
+}
+
+.route-map-preview__iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border: 0;
+}
+
+.route-map-preview--dark .route-map-preview__iframe {
+  filter: invert(92%) hue-rotate(180deg) saturate(0.78) brightness(0.94) contrast(1.05);
+}

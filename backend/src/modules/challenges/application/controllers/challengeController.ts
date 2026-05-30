@@ -65,17 +65,22 @@ const list = async (req: Request, res: Response) => {
     const includeOpen = req.query.include_open !== 'false';
     // Join users to include challenger/challenged names and normalize keys to camelCase
     const q = `
-      SELECT c.*, u1.name AS challenger_name, u2.name AS challenged_name,
+          SELECT c.*, u1.name AS challenger_name, u2.name AS challenged_name,
+            cc.name AS competition_category_name,
              v1.plate AS challenger_plate, v2.plate AS challenged_plate
+            , cr.origin_lat, cr.origin_lng, cr.destination_lat, cr.destination_lng,
+            cr.route_geometry, cr.provider AS route_provider
       FROM challenges c
       LEFT JOIN users u1 ON u1.id = c.challenger_id
       LEFT JOIN users u2 ON u2.id = c.challenged_id
+          LEFT JOIN competition_categories cc ON cc.id = c.competition_category_id
       LEFT JOIN vehicles v1 ON v1.id = c.challenger_vehicle_id
       LEFT JOIN vehicles v2 ON v2.id = c.challenged_vehicle_id
+          LEFT JOIN challenge_routes cr ON cr.challenge_id = c.id
       WHERE (
         c.challenger_id = $1
         OR c.challenged_id = $1
-        OR (${includeOpen ? 'c.challenged_id IS NULL' : 'FALSE'})
+        OR (${includeOpen ? "(c.challenged_id IS NULL AND c.state = 'pending')" : 'FALSE'})
       )
       ORDER BY c.created_at DESC LIMIT $2 OFFSET $3
     `;
@@ -86,6 +91,8 @@ const list = async (req: Request, res: Response) => {
       id: r.id,
       challengerId: r.challenger_id,
       challengedId: r.challenged_id,
+      competitionCategoryId: r.competition_category_id,
+      competitionCategoryName: r.competition_category_name,
       challengerVehicleId: r.challenger_vehicle_id,
       challengedVehicleId: r.challenged_vehicle_id,
       careerType: r.career_type,
@@ -101,9 +108,126 @@ const list = async (req: Request, res: Response) => {
       challengerPlate: r.challenger_plate,
       challengedPlate: r.challenged_plate,
       isOpen: !r.challenged_id,
+      route: r.origin_lat != null && r.origin_lng != null && r.destination_lat != null && r.destination_lng != null
+        ? {
+            origin_lat: Number(r.origin_lat),
+            origin_lng: Number(r.origin_lng),
+            destination_lat: Number(r.destination_lat),
+            destination_lng: Number(r.destination_lng),
+            route_geometry: r.route_geometry,
+            provider: r.route_provider,
+          }
+        : undefined,
     }));
 
     res.json({ success: true, message: 'Challenges listed', data });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * listTrackOptions
+ * Devuelve pistas/rutas predefinidas basadas en rutas ya guardadas en DB.
+ */
+const listTrackOptions = async (_req: Request, res: Response) => {
+  try {
+    const catalogQuery = `
+      SELECT
+        rt.id,
+        rt.name,
+        rt.city,
+        rt.country,
+        rt.agreed_location,
+        rt.competition_category_id,
+        cc.name AS competition_category_name,
+        rt.origin_lat,
+        rt.origin_lng,
+        rt.destination_lat,
+        rt.destination_lng,
+        rt.route_geometry,
+        rt.provider
+      FROM race_tracks rt
+      LEFT JOIN competition_categories cc ON cc.id = rt.competition_category_id
+      WHERE rt.is_active = TRUE
+      ORDER BY rt.city ASC, rt.name ASC
+      LIMIT 300
+    `;
+
+    const catalogRows = await pool.query(catalogQuery).catch(() => ({ rows: [] as any[] }));
+
+    if (catalogRows.rows.length > 0) {
+      const catalogData = catalogRows.rows.map((r: any) => ({
+        id: String(r.id),
+        locationName: `${r.name} (${r.city}, ${r.country})`,
+        competitionCategoryId: r.competition_category_id,
+        competitionCategoryName: r.competition_category_name,
+        route: {
+          origin_lat: Number(r.origin_lat),
+          origin_lng: Number(r.origin_lng),
+          destination_lat: Number(r.destination_lat),
+          destination_lng: Number(r.destination_lng),
+          route_geometry: r.route_geometry,
+          provider: r.provider,
+        },
+      }));
+
+      return res.json({ success: true, message: 'Track options listed', data: catalogData });
+    }
+
+    const q = `
+      SELECT DISTINCT ON (
+        LOWER(COALESCE(c.agreed_location, '')),
+        cr.origin_lat,
+        cr.origin_lng,
+        cr.destination_lat,
+        cr.destination_lng
+      )
+        c.id AS source_challenge_id,
+        COALESCE(NULLIF(TRIM(c.agreed_location), ''), CONCAT('Pista ', SUBSTRING(c.id::text, 1, 8))) AS location_name,
+        c.competition_category_id,
+        cc.name AS competition_category_name,
+        cr.origin_lat,
+        cr.origin_lng,
+        cr.destination_lat,
+        cr.destination_lng,
+        cr.route_geometry,
+        cr.provider
+      FROM challenges c
+      INNER JOIN challenge_routes cr ON cr.challenge_id = c.id
+      LEFT JOIN competition_categories cc ON cc.id = c.competition_category_id
+      WHERE cr.origin_lat IS NOT NULL
+        AND cr.origin_lng IS NOT NULL
+        AND cr.destination_lat IS NOT NULL
+        AND cr.destination_lng IS NOT NULL
+      ORDER BY
+        LOWER(COALESCE(c.agreed_location, '')),
+        cr.origin_lat,
+        cr.origin_lng,
+        cr.destination_lat,
+        cr.destination_lng,
+        c.created_at DESC
+      LIMIT 200
+    `;
+
+    const { rows } = await pool.query(q);
+
+    const data = rows.map((r: any) => ({
+      id: String(r.source_challenge_id),
+      locationName: r.location_name,
+      competitionCategoryId: r.competition_category_id,
+      competitionCategoryName: r.competition_category_name,
+      route: {
+        origin_lat: Number(r.origin_lat),
+        origin_lng: Number(r.origin_lng),
+        destination_lat: Number(r.destination_lat),
+        destination_lng: Number(r.destination_lng),
+        route_geometry: r.route_geometry,
+        provider: r.provider,
+      },
+    }));
+
+    res.json({ success: true, message: 'Track options listed', data });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -212,12 +336,17 @@ const adminList = async (req: Request, res: Response) => {
     const q = `
       SELECT
         c.*, u1.name AS challenger_name, u2.name AS challenged_name,
+        cc.name AS competition_category_name,
         v1.plate AS challenger_plate, v2.plate AS challenged_plate
+        , cr.origin_lat, cr.origin_lng, cr.destination_lat, cr.destination_lng,
+        cr.route_geometry, cr.provider AS route_provider
       FROM challenges c
       LEFT JOIN users u1 ON u1.id = c.challenger_id
       LEFT JOIN users u2 ON u2.id = c.challenged_id
+      LEFT JOIN competition_categories cc ON cc.id = c.competition_category_id
       LEFT JOIN vehicles v1 ON v1.id = c.challenger_vehicle_id
       LEFT JOIN vehicles v2 ON v2.id = c.challenged_vehicle_id
+      LEFT JOIN challenge_routes cr ON cr.challenge_id = c.id
       ${where}
       ORDER BY c.created_at DESC
       LIMIT $${idx++} OFFSET $${idx++}
@@ -229,6 +358,8 @@ const adminList = async (req: Request, res: Response) => {
       id: r.id,
       challengerId: r.challenger_id,
       challengedId: r.challenged_id,
+      competitionCategoryId: r.competition_category_id,
+      competitionCategoryName: r.competition_category_name,
       challengerVehicleId: r.challenger_vehicle_id,
       challengedVehicleId: r.challenged_vehicle_id,
       status: r.state,
@@ -242,6 +373,16 @@ const adminList = async (req: Request, res: Response) => {
       challengedName: r.challenged_name,
       challengerPlate: r.challenger_plate,
       challengedPlate: r.challenged_plate,
+      route: r.origin_lat != null && r.origin_lng != null && r.destination_lat != null && r.destination_lng != null
+        ? {
+            origin_lat: Number(r.origin_lat),
+            origin_lng: Number(r.origin_lng),
+            destination_lat: Number(r.destination_lat),
+            destination_lng: Number(r.destination_lng),
+            route_geometry: r.route_geometry,
+            provider: r.route_provider,
+          }
+        : undefined,
     }));
 
     res.json({ success: true, message: 'Admin challenges listed', data });
@@ -296,4 +437,14 @@ const adminDelete = async (req: Request, res: Response) => {
   }
 };
 
-export default { create, list, accept, reject: rejectChallenge, complete, adminList, adminUpdate, adminDelete };
+export default {
+  create,
+  list,
+  listTrackOptions,
+  accept,
+  reject: rejectChallenge,
+  complete,
+  adminList,
+  adminUpdate,
+  adminDelete,
+};
