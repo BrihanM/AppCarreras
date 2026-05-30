@@ -17,6 +17,7 @@ import { WebSocketService } from '@core/websocket/websocket.service';
 import { StorageService } from '@core/services/storage.service';
 import { STORAGE_KEYS } from '@core/constants/app.constants';
 import { NotificationsFacade } from '@features/notifications/facades/notifications.facade';
+import { ChallengesFacade } from '@features/challenges/facades/challenges.facade';
 
 @Component({
   selector: 'srx-shell',
@@ -36,6 +37,7 @@ export class ShellComponent implements OnInit {
   private readonly wsService = inject(WebSocketService);
   private readonly storage = inject(StorageService);
   private readonly notificationsFacade = inject(NotificationsFacade);
+  private readonly challengesFacade = inject(ChallengesFacade);
 
   /** Estado de apertura del sidebar (mobile). */
   readonly sidebarOpen = signal(true);
@@ -49,8 +51,10 @@ export class ShellComponent implements OnInit {
       this.wsService.connect(token);
       // Start listening realtime notifications after connecting socket
       this.notificationsFacade.initRealtimeNotifications();
+      this.challengesFacade.initRealtime();
       // Load existing notifications to populate badge/count
       this.notificationsFacade.loadNotifications();
+      this.challengesFacade.loadChallenges();
     }
   }
 

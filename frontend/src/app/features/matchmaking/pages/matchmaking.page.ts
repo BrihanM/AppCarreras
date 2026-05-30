@@ -136,7 +136,9 @@ export class MatchmakingPage implements OnInit {
           return;
         }
 
-        // mark as challenged in next tick to avoid ExpressionChangedAfterItHasBeenCheckedError
+        // Optimistic UI: mark pilot as challenged to block further actions
+        this.facade.markPilotInChallenge(String(pilot.id), true);
+        // also keep local sets for existing UI logic
         setTimeout(() => {
           this.challengedIds.add(String(pilot.id));
           try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
@@ -157,6 +159,7 @@ export class MatchmakingPage implements OnInit {
           },
           error: (err: any) => {
             setTimeout(() => {
+              this.facade.markPilotInChallenge(String(pilot.id), false);
               this.challengedIds.delete(String(pilot.id));
               try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
               // Log server response for investigation (stringify to reveal array content)

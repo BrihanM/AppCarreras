@@ -37,6 +37,7 @@ class NotificationService {
       const io = getIo();
       if (io) {
         io.to(`user:${created.user_id}`).emit('notification:new', created);
+        console.debug(`[notifications] emitted notification:${created.id} to room user:${created.user_id}`);
       }
     } catch (e) {
       // ignore socket emission errors

@@ -74,10 +74,10 @@
           <!-- Acción -->
           <button
             class="pilot-card__challenge-btn"
-            [disabled]="isSelf(pilot) || hasChallenged(pilot) || hasActiveOpponent(pilot) || !sameRank(pilot)"
+            [disabled]="isSelf(pilot) || pilot['inChallenge'] || hasActiveOpponent(pilot) || !sameRank(pilot)"
             (click)="challengePilot(pilot)"
           >
-            @if (challengedIds.has(pilot.id)) {
+            @if (pilot['inChallenge'] || challengedIds.has(pilot.id)) {
               ✓ RETO ENVIADO
             } @else if (activeOpponentIds.has(pilot.id)) {
               ⏳ RETO ACTIVO

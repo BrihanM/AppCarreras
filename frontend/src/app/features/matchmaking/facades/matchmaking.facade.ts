@@ -42,6 +42,13 @@ export class MatchmakingFacade {
       });
   }
 
+  /** Marca (optimistic) a un piloto como en reto para bloquear UI. */
+  markPilotInChallenge(pilotId: string, inChallenge: boolean): void {
+    this.pilots.update((list) =>
+      list.map((p) => (String(p.id) === String(pilotId) ? { ...p, inChallenge } : p))
+    );
+  }
+
   /**
    * Selecciona un piloto para retarlo.
    * @param pilot Piloto seleccionado.

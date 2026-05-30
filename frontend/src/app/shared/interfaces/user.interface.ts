@@ -19,6 +19,8 @@ export interface User {
   points: number;
   wins: number;
   losses: number;
+  /** Marca temporalmente si el piloto está en un reto (optimistic UI). */
+  inChallenge?: boolean;
   createdAt: string;
   updatedAt: string;
 }

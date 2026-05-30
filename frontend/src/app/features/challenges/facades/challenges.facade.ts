@@ -4,19 +4,26 @@
  *
  * @class ChallengesFacade
  */
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
 import { finalize } from 'rxjs/operators';
 import { ChallengesService } from '../services/challenges.service';
 import { ToastService } from '@core/services/toast.service';
 import { AuthService } from '@core/services/auth.service';
 import { Challenge } from '@shared/interfaces';
 import { ChallengeStatus } from '@shared/enums/app.enums';
+import { WebSocketService } from '@core/websocket/websocket.service';
+import { SocketEvent } from '@shared/enums/app.enums';
+import { MatchmakingFacade } from '@features/matchmaking/facades/matchmaking.facade';
+import { Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ChallengesFacade {
   private readonly challengesService = inject(ChallengesService);
   private readonly toastService = inject(ToastService);
   readonly authService = inject(AuthService);
+  private readonly wsService = inject(WebSocketService);
+  private readonly matchmaking = inject(MatchmakingFacade);
+  private wsSub?: Subscription;
 
   readonly isLoading = signal(false);
   readonly challenges = signal<Challenge[]>([]);
@@ -50,9 +57,30 @@ export class ChallengesFacade {
     this.challengesService.getMyChallenges()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (res) => this.challenges.set(res.data),
+        next: (res) => this.challenges.set((res.data || []).map((r: any) => this.normalizeChallenge(r))),
         error: () => this.toastService.error('Error cargando retos.'),
       });
+  }
+
+  /** Inicializa listeners en tiempo real para retos. */
+  initRealtime(): void {
+    // Subscribe to creation/update/completion events and refresh local state
+    this.wsSub = this.wsService.on<any>('challenge:created').subscribe((c) => {
+      this.loadChallenges();
+      this.matchmaking.loadPilots();
+    });
+    this.wsSub.add(this.wsService.on<any>('challenge:updated').subscribe((c) => {
+      this.loadChallenges();
+      this.matchmaking.loadPilots();
+    }));
+    this.wsSub.add(this.wsService.on<any>('challenge:completed').subscribe((c) => {
+      this.loadChallenges();
+      this.matchmaking.loadPilots();
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.wsSub?.unsubscribe();
   }
 
   /**
@@ -101,10 +129,31 @@ export class ChallengesFacade {
     });
   }
 
-  private updateChallenge(updated: Challenge): void {
+  private normalizeChallenge(raw: any): Challenge {
+    if (!raw) return raw;
+    return {
+      id: raw.id,
+      challengerId: raw.challengerId || raw.challenger_id,
+      challengedId: raw.challengedId || raw.challenged_id,
+      challengerName: raw.challengerName || raw.challenger_name || '',
+      challengedName: raw.challengedName || raw.challenged_name || '',
+      status: (raw.status || raw.state) as any,
+      winnerId: raw.winnerId || raw.winner_id,
+      agreedLocation: (raw as any).agreedLocation || raw.agreed_location,
+      agreedDate: (raw as any).agreedDate || raw.agreed_date,
+      notes: raw.notes,
+      createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+      updatedAt: raw.updatedAt || raw.updated_at || new Date().toISOString(),
+    } as Challenge;
+  }
+
+  private updateChallenge(updated: any): void {
     if (!updated || !updated.id) return;
-    this.challenges.update((list) =>
-      list.map((c) => (c.id === updated.id ? updated : c))
-    );
+    const norm = this.normalizeChallenge(updated);
+    this.challenges.update((list) => list.map((c) => (c.id === norm.id ? norm : c)));
+    // Ensure full refresh if the item wasn't present (e.g., pagination)
+    if (!this.challenges().some((c) => c.id === norm.id)) {
+      this.loadChallenges();
+    }
   }
 }

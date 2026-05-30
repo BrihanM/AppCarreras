@@ -7,6 +7,7 @@ import parseCookies from './middleware/parseCookies';
 import cookieAuth from './middleware/cookieAuth';
 import { Server } from 'socket.io';
 import { setIo } from './socket';
+import UserRepositoryPg from './modules/auth/infrastructure/adapters/pg/UserRepositoryPg';
 import { connectDB } from './config/db';
 import authRoutes from './modules/auth/application/routes';
 import usersRoutes from './modules/users/application/routes';
@@ -101,7 +102,7 @@ app.use('/api', categoriesRoutes);
  * - Si verifica correctamente, adjunta `socket.data.user = { id, username }`.
  * - No bloquea la conexión si no hay token (modo opcional). Cambiar para forzar auth.
  */
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   try {
     const cookieHeader = socket.handshake.headers.cookie as string | undefined;
     const authHeader = socket.handshake.headers.authorization as string | undefined;
@@ -117,8 +118,17 @@ io.use((socket, next) => {
     if (token) {
       const jwt = require('jsonwebtoken');
       const secretLocal = process.env.JWT_SECRET || 'changeme';
-      const payload = jwt.verify(token, secretLocal as any);
-      (socket as any).data.user = { id: (payload as any).sub, username: (payload as any).username };
+      const payload = jwt.verify(token, secretLocal as any) as any;
+      // If payload.sub refers to an account id, attempt to resolve the linked user id
+      let resolvedUserId = payload.sub;
+      try {
+        const userRepo = new UserRepositoryPg();
+        const user = await userRepo.findByAccountId(String(payload.sub));
+        if (user && user.id) resolvedUserId = user.id;
+      } catch (e) {
+        // ignore lookup errors and fallback to payload.sub
+      }
+      (socket as any).data.user = { id: resolvedUserId, username: payload.username };
     }
     return next();
   } catch (err) {
