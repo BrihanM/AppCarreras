@@ -16,6 +16,7 @@ import vehiclesRoutes from './modules/vehicles/application/routes';
 import challengesRoutes from './modules/challenges/application/routes';
 import notificationsRoutes from './modules/notifications/application/routes';
 import categoriesRoutes from './modules/categories/application/routes';
+import cacheRoutes from './modules/cache/application/routes';
 
 
 /**
@@ -94,6 +95,7 @@ app.use('/api', vehiclesRoutes);
 app.use('/api', challengesRoutes);
 app.use('/api', notificationsRoutes);
 app.use('/api', categoriesRoutes);
+app.use('/api', cacheRoutes);
 
 // Socket.io
 /**

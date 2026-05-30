@@ -10,6 +10,15 @@ import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
 import { ApiResponse, PaginatedResponse, User } from '@shared/interfaces';
 import { Category, CategoryPayload } from '@shared/interfaces';
+import { Observable } from 'rxjs';
+import { ApiResponse, PaginatedResponse } from '@shared/interfaces';
+
+export interface CacheRule {
+  id: string;
+  name?: string;
+  mutating_endpoint: string;
+  invalidates: string[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -42,6 +51,26 @@ export class AdminService {
   /** Lista todas las categorías. */
   getCategories(): Observable<PaginatedResponse<Category>> {
     return this.http.get<PaginatedResponse<Category>>(`${this.base}/categories`);
+  }
+
+  /** Lista reglas de invalidación (admin). */
+  getCacheRules(): Observable<ApiResponse<CacheRule[]>> {
+    return this.http.get<ApiResponse<CacheRule[]>>(`${this.base}/admin/cache-rules`);
+  }
+
+  /** Crea una regla de invalidación. */
+  createCacheRule(payload: Partial<CacheRule>): Observable<ApiResponse<CacheRule>> {
+    return this.http.post<ApiResponse<CacheRule>>(`${this.base}/admin/cache-rules`, payload);
+  }
+
+  /** Actualiza una regla de invalidación. */
+  updateCacheRule(id: string, payload: Partial<CacheRule>): Observable<ApiResponse<CacheRule>> {
+    return this.http.put<ApiResponse<CacheRule>>(`${this.base}/admin/cache-rules/${id}`, payload);
+  }
+
+  /** Elimina una regla de invalidación. */
+  deleteCacheRule(id: string): Observable<any> {
+    return this.http.delete(`${this.base}/admin/cache-rules/${id}`);
   }
 
   /**

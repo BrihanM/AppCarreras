@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { CacheService } from '../services/cache.service';
+import { CacheRulesService } from '../services/cache-rules.service';
 
 /**
  * Interceptor que cachea respuestas GET con TTL.
@@ -37,6 +38,23 @@ export const cacheInterceptor: HttpInterceptorFn = (req, next) => {
           try {
             // invalidar sólo entradas pertenecientes al mismo Authorization
             cache.invalidatePrefix(base, auth);
+
+            // Invalidate based on admin-defined rules (if any)
+            try {
+              const rulesSvc = inject(CacheRulesService);
+              rulesSvc.getRules().then((rules) => {
+                for (const r of rules || []) {
+                  try {
+                    // match by prefix or exact match
+                    if (!r.mutating_endpoint) continue;
+                    const me = r.mutating_endpoint.replace(/\s+$/g, '');
+                    if (base === me || base.startsWith(me)) {
+                      (r.invalidates || []).forEach((p) => cache.invalidatePrefix(p, auth));
+                    }
+                  } catch (e) {}
+                }
+              }).catch(()=>{});
+            } catch (e) {}
 
             // Además invalidar rutas relacionadas si podemos inferir user ids
             const body = event.body || {};

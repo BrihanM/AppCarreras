@@ -9,11 +9,15 @@ import { finalize } from 'rxjs/operators';
 import { VehiclesService } from '../services/vehicles.service';
 import { ToastService } from '@core/services/toast.service';
 import { Vehicle, VehiclePayload } from '@shared/interfaces';
+import { RealtimeService } from '@core/services/realtime.service';
+import { Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class VehiclesFacade {
   private readonly vehiclesService = inject(VehiclesService);
   private readonly toastService = inject(ToastService);
+  private readonly realtime = inject(RealtimeService);
+  private realtimeSub?: Subscription;
 
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -48,6 +52,21 @@ export class VehiclesFacade {
         },
         error: () => this.toastService.error('Error cargando vehículos.'),
       });
+  }
+
+  constructor() {
+    // subscribe to realtime events to refresh vehicles on relevant updates
+    try {
+      this.realtimeSub = this.realtime.events$.subscribe((ev) => {
+        if (['vehicle:activated','vehicle:deleted','user:updated','user:created'].includes(ev.type)) {
+          this.loadVehicles();
+        }
+      });
+    } catch (e) {}
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSub?.unsubscribe();
   }
 
   /**

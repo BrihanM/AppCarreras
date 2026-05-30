@@ -11,6 +11,8 @@ import { ToastService } from '@core/services/toast.service';
 import { AuthService } from '@core/services/auth.service';
 import { User } from '@shared/interfaces';
 import { ProfileFacade } from '@features/profile/facades/profile.facade';
+import { RealtimeService } from '@core/services/realtime.service';
+import { Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class MatchmakingFacade {
@@ -18,6 +20,8 @@ export class MatchmakingFacade {
   private readonly toastService = inject(ToastService);
   readonly authService = inject(AuthService);
   private readonly profileFacade = inject(ProfileFacade);
+  private readonly realtime = inject(RealtimeService);
+  private realtimeSub?: Subscription;
 
   readonly isLoading = signal(false);
   readonly pilots = signal<User[]>([]);
@@ -64,5 +68,19 @@ export class MatchmakingFacade {
   applyFilter(city: string): void {
     this.cityFilter.set(city);
     this.loadPilots({ city: city || undefined });
+  }
+
+  constructor() {
+    try {
+      this.realtimeSub = this.realtime.events$.subscribe((ev) => {
+        if (['user:updated','vehicle:activated','vehicle:deleted','challenge:created','challenge:updated'].includes(ev.type)) {
+          this.loadPilots();
+        }
+      });
+    } catch (e) {}
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSub?.unsubscribe();
   }
 }

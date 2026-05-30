@@ -21,6 +21,10 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('./pages/categories/admin-categories.page').then((m) => m.AdminCategoriesPage),
       },
+      {
+        path: 'cache-rules',
+        loadComponent: () => import('./pages/cache-rules/admin-cache-rules.page').then((m) => m.AdminCacheRulesPage),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

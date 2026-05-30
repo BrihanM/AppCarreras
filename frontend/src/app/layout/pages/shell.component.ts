@@ -15,6 +15,7 @@ import { ToastContainerComponent } from '../../shared/components/ui/toast-contai
 import { AuthService } from '@core/services/auth.service';
 import { WebSocketService } from '@core/websocket/websocket.service';
 import { StorageService } from '@core/services/storage.service';
+import { RealtimeService } from '@core/services/realtime.service';
 import { STORAGE_KEYS } from '@core/constants/app.constants';
 import { NotificationsFacade } from '@features/notifications/facades/notifications.facade';
 import { ChallengesFacade } from '@features/challenges/facades/challenges.facade';
@@ -38,6 +39,7 @@ export class ShellComponent implements OnInit {
   private readonly storage = inject(StorageService);
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly challengesFacade = inject(ChallengesFacade);
+  private readonly realtime = inject(RealtimeService);
 
   /** Estado de apertura del sidebar (mobile). */
   readonly sidebarOpen = signal(true);
@@ -49,6 +51,8 @@ export class ShellComponent implements OnInit {
     const token = this.storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       this.wsService.connect(token);
+      // init global realtime handlers (invalidate cache and broadcast events)
+      try { this.realtime?.init(); } catch (e) {}
       // Start listening realtime notifications after connecting socket
       this.notificationsFacade.initRealtimeNotifications();
       this.challengesFacade.initRealtime();

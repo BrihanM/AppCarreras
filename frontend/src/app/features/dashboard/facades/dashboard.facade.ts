@@ -14,6 +14,8 @@ import { ProfileService } from '@features/profile/services/profile.service';
 import { ProfileFacade } from '@features/profile/facades/profile.facade';
 import { User } from '@shared/interfaces';
 import { Challenge } from '@shared/interfaces';
+import { RealtimeService } from '@core/services/realtime.service';
+import { Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
@@ -21,6 +23,8 @@ export class DashboardFacade {
   readonly authService = inject(AuthService);
   private readonly profileService = inject(ProfileService);
   private readonly profileFacade = inject(ProfileFacade);
+  private readonly realtime = inject(RealtimeService);
+  private realtimeSub?: Subscription;
 
   readonly isLoading = signal(false);
   readonly topPilots = signal<User[]>([]);
@@ -57,5 +61,19 @@ export class DashboardFacade {
         },
         error: (err) => console.error('[Dashboard] Error cargando datos:', err),
       });
+  }
+
+  constructor() {
+    try {
+      this.realtimeSub = this.realtime.events$.subscribe((ev) => {
+        if (['user:updated','user:created','challenge:created','challenge:updated','vehicle:activated','category:updated'].includes(ev.type)) {
+          this.loadDashboard();
+        }
+      });
+    } catch (e) {}
+  }
+
+  ngOnDestroy(): void {
+    this.realtimeSub?.unsubscribe();
   }
 }
