@@ -3,6 +3,8 @@
  */
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { APP_ROUTES } from '@core/constants/app.constants';
 import { AdminService } from '../../services/admin.service';
 import { ToastService } from '@core/services/toast.service';
 import { User } from '@shared/interfaces';
@@ -12,7 +14,7 @@ import { EmptyStateComponent } from '../../../../shared/components/ui/empty-stat
 @Component({
   selector: 'srx-admin-users-page',
   standalone: true,
-  imports: [CommonModule, SkeletonComponent, EmptyStateComponent],
+  imports: [CommonModule, SkeletonComponent, EmptyStateComponent, RouterLink],
   templateUrl: './admin-users.page.html',
   styleUrls: ['./admin-users.page.scss'],
 })
@@ -22,6 +24,8 @@ export class AdminUsersPage implements OnInit {
 
   readonly isLoading = signal(false);
   readonly users = signal<User[]>([]);
+
+  readonly routes = APP_ROUTES;
 
   ngOnInit(): void {
     this.isLoading.set(true);

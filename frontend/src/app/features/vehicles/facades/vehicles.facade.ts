@@ -44,7 +44,8 @@ export class VehiclesFacade {
               plate: v.plate,
               imageUrl: v.image_url || v.imageUrl,
               isActive: !!v.active,
-              horsepower: v.horsepower,
+              brandCatalogId: v.brand_catalog_id || v.brandCatalogId,
+              modelCatalogId: v.model_catalog_id || v.modelCatalogId,
               createdAt: v.created_at || v.createdAt,
             } as Vehicle);
           });
@@ -96,7 +97,8 @@ export class VehiclesFacade {
             plate: raw.plate,
             imageUrl: raw.image_url || raw.imageUrl,
             isActive: !!raw.active,
-            horsepower: raw.horsepower,
+            brandCatalogId: raw.brand_catalog_id || raw.brandCatalogId,
+            modelCatalogId: raw.model_catalog_id || raw.modelCatalogId,
             createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
           };
           this.vehicles.update((list) => [...(list || []), normalized]);

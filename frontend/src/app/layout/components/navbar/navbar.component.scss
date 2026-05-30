@@ -65,6 +65,11 @@
     gap: 0.5rem;
   }
 
+  &__icon-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
   &__icon-btn {
     position: relative;
     display: flex;

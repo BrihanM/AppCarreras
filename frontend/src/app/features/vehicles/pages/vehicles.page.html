@@ -55,9 +55,6 @@
             } @else {
               <p class="vehicle-card__meta">{{ vehicle.year }} · {{ vehicle.color }}</p>
             }
-            @if (vehicle.horsepower) {
-              <p class="vehicle-card__hp">⚡ {{ vehicle.horsepower }} HP</p>
-            }
           </div>
 
           <!-- Acciones -->
@@ -91,12 +88,22 @@
       <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Marca (make)</label>
-            <input class="form-input" formControlName="make" placeholder="Toyota" />
+            <label class="form-label">Marca</label>
+            <select class="form-input" formControlName="brandCatalogId" (change)="onBrandChange(form.get('brandCatalogId')?.value || '')">
+              <option value="">Selecciona marca</option>
+              @for (brand of brands; track brand.id) {
+                <option [value]="brand.id">{{ brand.name }}</option>
+              }
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">Modelo</label>
-            <input class="form-input" formControlName="model" placeholder="Supra" />
+            <select class="form-input" formControlName="modelCatalogId" [disabled]="!form.get('brandCatalogId')?.value">
+              <option value="">Selecciona modelo</option>
+              @for (item of models; track item.id) {
+                <option [value]="item.id">{{ item.name }}</option>
+              }
+            </select>
           </div>
         </div>
 
@@ -118,10 +125,6 @@
             @if (form.get('plate')?.invalid && (form.get('plate')?.touched || form.get('plate')?.dirty)) {
               <p class="form-error">La placa debe tener 3 letras seguidas de 3 números (ej. ASD123).</p>
             }
-          </div>
-          <div class="form-group">
-            <label class="form-label">HP (opcional)</label>
-            <input class="form-input" type="number" formControlName="horsepower" placeholder="320" />
           </div>
         </div>
 

@@ -1,0 +1,115 @@
+<div class="admin-page">
+  <a class="back-link" [routerLink]="routes.ADMIN.DASHBOARD">← Volver al panel</a>
+  <h1 class="page-title">🏎️ Gestión de Vehículos</h1>
+
+  <div class="toolbar">
+    <input
+      class="search-input"
+      type="text"
+      [(ngModel)]="search"
+      placeholder="Buscar por marca, modelo, placa o usuario"
+    />
+    <button class="btn-primary" (click)="load()">Buscar</button>
+  </div>
+
+  <div class="catalog-panel">
+    <h2 class="catalog-title">Catálogo de marcas y modelos</h2>
+    <div class="catalog-create">
+      <input class="form-input" type="text" [(ngModel)]="newBrandName" placeholder="Nueva marca" />
+      <button class="btn-primary" (click)="createBrand()">Crear marca</button>
+    </div>
+    <div class="catalog-create">
+      <select class="form-input" [(ngModel)]="selectedBrandForModel">
+        <option value="">Marca para el modelo</option>
+        @for (b of brands(); track b.id) {
+          <option [value]="b.id">{{ b.name }}</option>
+        }
+      </select>
+      <input class="form-input" type="text" [(ngModel)]="newModelName" placeholder="Nuevo modelo" />
+      <button class="btn-primary" (click)="createModel()">Crear modelo</button>
+    </div>
+
+    <div class="catalog-list">
+      @for (item of catalog(); track item.id) {
+        <div class="catalog-row">
+          <p class="catalog-row__name">
+            {{ item.type === 'brand' ? 'Marca' : 'Modelo' }}: {{ item.name }}
+            @if (item.parent_name) { <span class="catalog-row__meta">· {{ item.parent_name }}</span> }
+          </p>
+          <button class="btn-secondary" (click)="toggleCatalog(item)">
+            {{ item.is_active ? 'Desactivar' : 'Activar' }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <p class="muted">Cargando vehículos...</p>
+  } @else if (vehicles().length === 0) {
+    <srx-empty-state icon="🏎️" title="Sin vehículos" message="No hay resultados para los filtros actuales." />
+  } @else {
+    <div class="list">
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <div class="row">
+          <div class="row__info">
+            <p class="row__title">{{ vehicle.make }} {{ vehicle.model }} · {{ vehicle.plate }}</p>
+            <p class="row__meta">Propietario: {{ vehicle.user_name || vehicle.user_id }}</p>
+          </div>
+          <span class="status-badge" [class.status-badge--active]="vehicle.active">
+            {{ vehicle.active ? 'activo' : 'inactivo' }}
+          </span>
+          <div class="row__actions">
+            <button class="btn-secondary" (click)="openEdit(vehicle)">Editar</button>
+            <button class="btn-danger" (click)="removeVehicle(vehicle.id)">Eliminar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (editingId()) {
+  <div class="modal-backdrop" (click)="closeEdit()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2 class="modal__title">Editar vehículo</h2>
+      <form class="form" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <label>
+          Usuario ID
+          <input class="form-input" formControlName="user_id" type="text" />
+        </label>
+        <label>
+          Marca
+          <select class="form-input" formControlName="brand_catalog_id" (change)="onBrandChange(editForm.get('brand_catalog_id')?.value || '')">
+            <option value="">Selecciona marca</option>
+            @for (b of brands(); track b.id) {
+              <option [value]="b.id">{{ b.name }} @if (!b.is_active) { (inactiva) }</option>
+            }
+          </select>
+        </label>
+        <label>
+          Modelo
+          <select class="form-input" formControlName="model_catalog_id">
+            <option value="">Selecciona modelo</option>
+            @for (m of models(); track m.id) {
+              <option [value]="m.id">{{ m.name }} @if (!m.is_active) { (inactivo) }</option>
+            }
+          </select>
+        </label>
+        <label>
+          Placa
+          <input class="form-input" formControlName="plate" type="text" />
+        </label>
+        <label class="check-row">
+          <input type="checkbox" formControlName="active" />
+          Activo
+        </label>
+
+        <div class="modal__actions">
+          <button class="btn-secondary" type="button" (click)="closeEdit()">Cancelar</button>
+          <button class="btn-primary" [disabled]="editForm.invalid" type="submit">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

@@ -1,0 +1,89 @@
+<div class="admin-page">
+  <a class="back-link" [routerLink]="routes.ADMIN.DASHBOARD">← Volver al panel</a>
+  <h1 class="page-title">🏁 Gestión de Retos</h1>
+
+  <div class="filters">
+    <select class="form-input" [(ngModel)]="status" (change)="load()">
+      <option value="">Todos los estados</option>
+      <option value="active">Activos (pending + accepted)</option>
+      <option value="pending">Pending</option>
+      <option value="accepted">Accepted</option>
+      <option value="completed">Completed</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <input
+      class="form-input"
+      type="text"
+      [(ngModel)]="search"
+      (keyup.enter)="load()"
+      placeholder="Buscar por nombre de participante"
+    />
+    <button class="btn-primary" (click)="load()">Filtrar</button>
+  </div>
+
+  @if (isLoading()) {
+    <p class="muted">Cargando retos...</p>
+  } @else if (challenges().length === 0) {
+    <srx-empty-state icon="🏁" title="Sin retos" message="No hay retos para estos filtros." />
+  } @else {
+    <div class="list">
+      @for (item of challenges(); track item.id) {
+        <div class="row">
+          <div class="row__info">
+            <p class="row__title">{{ item.challengerName || item.challengerId }} vs {{ item.challengedName || item.challengedId }}</p>
+            <p class="row__meta">
+              Estado: <strong>{{ item.status }}</strong>
+              @if (item.challengerPlate || item.challengedPlate) {
+                · {{ item.challengerPlate }} / {{ item.challengedPlate }}
+              }
+            </p>
+          </div>
+          <div class="row__actions">
+            <button class="btn-secondary" (click)="openEdit(item)">Editar</button>
+            <button class="btn-danger" (click)="removeChallenge(item.id)">Eliminar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (editingId()) {
+  <div class="modal-backdrop" (click)="closeEdit()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2 class="modal__title">Editar reto</h2>
+      <form class="form" [formGroup]="editForm" (ngSubmit)="saveEdit()">
+        <label>
+          Estado
+          <select class="form-input" formControlName="status">
+            <option value="pending">pending</option>
+            <option value="accepted">accepted</option>
+            <option value="completed">completed</option>
+            <option value="rejected">rejected</option>
+          </select>
+        </label>
+        <label>
+          Winner ID (opcional)
+          <input class="form-input" formControlName="winnerId" type="text" />
+        </label>
+        <label>
+          Ubicación
+          <input class="form-input" formControlName="agreedLocation" type="text" />
+        </label>
+        <label>
+          Fecha acordada
+          <input class="form-input" formControlName="agreedDate" type="datetime-local" />
+        </label>
+        <label>
+          Notas
+          <textarea class="form-input" formControlName="notes" rows="3"></textarea>
+        </label>
+
+        <div class="modal__actions">
+          <button class="btn-secondary" type="button" (click)="closeEdit()">Cancelar</button>
+          <button class="btn-primary" type="submit">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

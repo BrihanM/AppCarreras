@@ -22,14 +22,18 @@ const service = new AuthService(accountRepo, null, refreshRepo);
 const login = async (req: Request, res: Response) => {
   try {
     const parsed = loginSchema.parse(req.body);
-    const account = await service.authenticate(parsed.identifier, parsed.password);
-      const secret = process.env.JWT_SECRET || 'changeme';
-      console.debug('authController: JWT_SECRET length', String(secret).length);
-    const accessExpiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
-    const accessToken = jwt.sign({ sub: account.id, username: account.username }, secret as any, { expiresIn: accessExpiresIn } as any);
-    // create refresh token and set cookie
     const ip = req.ip;
     const ua = req.headers['user-agent'] as string | undefined;
+    const account = await service.authenticate(parsed.identifier, parsed.password, ip, ua);
+    const secret = process.env.JWT_SECRET || 'changeme';
+      console.debug('authController: JWT_SECRET length', String(secret).length);
+    const accessExpiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
+    const accessToken = jwt.sign(
+      { sub: account.id, username: account.username, role: (account as any).role },
+      secret as any,
+      { expiresIn: accessExpiresIn } as any
+    );
+    // create refresh token and set cookie
     const { token: refreshToken, expiresAt } = await service.createRefreshToken(account.id, ip, ua);
     const days = Number(process.env.REFRESH_TOKEN_DAYS) || 7;
     const maxAge = days * 24 * 60 * 60 * 1000;
@@ -61,7 +65,12 @@ const refresh = async (req: Request, res: Response) => {
     const { token: newRefresh, expiresAt, userId } = await service.rotateRefreshToken(presented, ip, ua);
     const secret = process.env.JWT_SECRET || 'changeme';
     const accessExpiresIn = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m';
-    const accessToken = jwt.sign({ sub: userId }, secret as any, { expiresIn: accessExpiresIn } as any);
+    const account = await service.getAccount(userId);
+    const accessToken = jwt.sign(
+      { sub: userId, username: (account as any)?.username, role: (account as any)?.role },
+      secret as any,
+      { expiresIn: accessExpiresIn } as any
+    );
     const days = Number(process.env.REFRESH_TOKEN_DAYS) || 7;
     const maxAge = days * 24 * 60 * 60 * 1000;
     res.cookie('refreshToken', newRefresh, {

@@ -1,6 +1,6 @@
 <nav class="navbar">
   <div class="navbar__brand">
-    <button class="navbar__menu-btn" (click)="menuToggle.emit()" aria-label="Toggle menu">
+    <button class="navbar__menu-btn" (click)="menuToggle.emit()" aria-label="Toggle menu" title="Mostrar/ocultar menú">
       <span></span><span></span><span></span>
     </button>
     <a class="navbar__logo" [routerLink]="routes.DASHBOARD">
@@ -10,13 +10,18 @@
   </div>
 
   <div class="navbar__actions">
-    <!-- Notificaciones -->
-    <a class="navbar__icon-btn" [routerLink]="routes.NOTIFICATIONS" aria-label="Notificaciones">
-      <span class="icon">🔔</span>
-      @if (unreadCount > 0) {
-        <span class="badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+    <!-- Notificaciones: abrir popover -->
+    <div class="navbar__icon-wrapper" #notifWrapper>
+      <button #notifBtn class="navbar__icon-btn" (click)="toggleNotifications()" aria-label="Notificaciones">
+        <span class="icon">🔔</span>
+        @if (unreadCount > 0) {
+          <span class="badge">{{ unreadCount > 10 ? '10+' : unreadCount }}</span>
+        }
+      </button>
+      @if (notificationsOpen()) {
+        <srx-notifications-popover />
       }
-    </a>
+    </div>
 
     <!-- Matchmaking -->
     <a class="navbar__icon-btn" [routerLink]="routes.MATCHMAKING" aria-label="Matchmaking">

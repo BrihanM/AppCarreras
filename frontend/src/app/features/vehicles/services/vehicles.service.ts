@@ -20,6 +20,21 @@ export class VehiclesService {
 
   constructor(private readonly http: HttpClient) {}
 
+  getBrands(activeOnly = true): Observable<any[]> {
+    return this.http.get<any>(`${this.api}/vehicle-catalog/brands`, { params: { activeOnly: String(activeOnly) } }).pipe(
+      map((res) => res?.data ?? []),
+      catchError(() => of([]))
+    );
+  }
+
+  getModels(brandId: string, activeOnly = true): Observable<any[]> {
+    if (!brandId) return of([]);
+    return this.http.get<any>(`${this.api}/vehicle-catalog/models`, { params: { brand_id: brandId, activeOnly: String(activeOnly) } }).pipe(
+      map((res) => res?.data ?? []),
+      catchError(() => of([]))
+    );
+  }
+
   /** Lista todos los vehículos del usuario autenticado. */
   getMyVehicles(): Observable<PaginatedResponse<Vehicle>> {
     const id = this.auth.currentUser()?.id;
@@ -70,6 +85,8 @@ export class VehiclesService {
     const backendPayload = {
       make: (payload as any).make || payload.brand,
       model: payload.model,
+      brand_catalog_id: payload.brandCatalogId,
+      model_catalog_id: payload.modelCatalogId,
       plate: payload.plate ?? 'N/A',
       active: false,
     } as any;

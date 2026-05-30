@@ -216,6 +216,10 @@ img {
   50% { box-shadow: 0 0 20px rgba(255, 50, 0, 0.6); }
 }
 
+/* Global modal stacking: ensure modals and backdrops appear above fixed chrome like sidebar */
+.modal-backdrop { z-index: 2000 !important; }
+.modal { z-index: 2100 !important; }
+
 // ─── Clases de animación ──────────────────────────────────────
 .animate-fade-in {
   animation: fadeIn 0.3s ease forwards;

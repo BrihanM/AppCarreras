@@ -27,6 +27,8 @@ export const APP_ROUTES = {
     ROOT: '/admin',
     USERS: '/admin/users',
     CATEGORIES: '/admin/categories',
+    VEHICLES: '/admin/vehicles',
+    CHALLENGES: '/admin/challenges',
     DASHBOARD: '/admin/dashboard',
   },
 } as const;

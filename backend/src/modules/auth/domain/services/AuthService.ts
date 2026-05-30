@@ -163,13 +163,23 @@ class AuthService {
    * @param {string} password - Contraseña en texto plano.
    * @returns {Promise<Account>} Cuenta autenticada.
    */
-  async authenticate(identifier: string, password: string): Promise<Account> {
+  async authenticate(identifier: string, password: string, ip?: string, ua?: string): Promise<Account> {
     const byUsername = await this.accountRepo.findByUsername(identifier);
     const account = byUsername || await this.accountRepo.findByEmail(identifier);
     if (!account) throw new Error('Invalid credentials');
     const match = await bcrypt.compare(password, account.password_hash);
     if (!match) throw new Error('Invalid credentials');
-    return account;
+    // Update last_connection timestamp
+    try {
+      const payload: any = { last_connection: new Date().toISOString() };
+      if (ip) payload.last_ip = ip;
+      if (ua) payload.last_user_agent = ua;
+      const updated = await this.updateAccount(account.id, payload as any);
+      return updated;
+    } catch (e) {
+      // If update fails, still return authenticated account
+      return account;
+    }
   }
 
   /**

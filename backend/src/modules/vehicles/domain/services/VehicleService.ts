@@ -56,6 +56,14 @@ class VehicleService {
   }
 
   /**
+   * listAllVehicles
+   * Listado administrativo con filtros opcionales.
+   */
+  async listAllVehicles(params?: { userId?: string; search?: string; page?: number; limit?: number }): Promise<Vehicle[]> {
+    return this.repo.listAll(params);
+  }
+
+  /**
    * activateVehicle
    * Activa un vehículo concreto (y desactiva los demás del mismo usuario).
    * - Lanza error si el vehículo no existe.
@@ -74,6 +82,31 @@ class VehicleService {
       if (io) io.to(`user:${activated.user_id}`).emit('vehicle:activated', activated);
     } catch (e) {}
     return activated;
+  }
+
+  /**
+   * updateVehicle
+   * Actualiza un vehículo y mantiene la regla de un único activo por usuario.
+   */
+  async updateVehicle(id: string, attrs: Partial<Vehicle>): Promise<Vehicle> {
+    const existing = await this.repo.findById(id);
+    if (!existing) throw new Error('Vehicle not found');
+
+    const nextUserId = attrs.user_id || existing.user_id;
+    const nextActive = typeof attrs.active === 'boolean' ? attrs.active : !!existing.active;
+
+    if (nextActive) {
+      await this.repo.deactivateAllForUser(nextUserId);
+    }
+
+    const updated = await this.repo.update(id, { ...attrs, user_id: nextUserId, active: nextActive });
+    try {
+      const io = getIo();
+      if (io) {
+        io.to(`user:${updated.user_id}`).emit('vehicle:updated', updated);
+      }
+    } catch (e) {}
+    return updated;
   }
 
   /**

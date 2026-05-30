@@ -13,10 +13,17 @@
   overflow-x: hidden;
   z-index: 900;
   transition: transform 0.3s ease;
+  transform: translateX(0); /* default visible on desktop */
+
+  /* Allow explicit closed state even on desktop */
+  &.sidebar--closed {
+    transform: translateX(-100%);
+  }
 
   @media (max-width: 768px) {
     transform: translateX(-100%);
     &--open { transform: translateX(0); }
+    &.sidebar--closed { transform: translateX(-100%); }
   }
 
   &__profile {

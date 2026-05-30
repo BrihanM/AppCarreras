@@ -13,7 +13,8 @@ export interface Vehicle {
   plate?: string;
   imageUrl?: string;
   isActive: boolean;
-  horsepower?: number;
+  brandCatalogId?: string;
+  modelCatalogId?: string;
   categoryId?: string;
   categoryName?: string;
   createdAt: string;
@@ -23,10 +24,11 @@ export interface Vehicle {
 export interface VehiclePayload {
   brand: string;
   model: string;
+  brandCatalogId?: string;
+  modelCatalogId?: string;
   year: number;
   color: string;
   plate?: string;
   imageUrl?: string;
-  horsepower?: number;
   categoryId?: string;
 }

@@ -23,3 +23,5 @@
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display:flex;align-items:center;justify-content:center; }
 .modal { background: #0f1720; padding: 1rem; border-radius: 8px; width: 100%; max-width: 520px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 .create-form-top { margin-bottom: 1rem; }
+
+.back-link { display:inline-block; color: rgba(255,255,255,0.75); font-weight:600; margin-bottom:0.5rem; text-decoration:none; }

@@ -57,7 +57,7 @@ export default function cookieAuth(optional = true) {
     }
     try {
       const payload = jwt.verify(token, secret as any) as any;
-      (req as any).user = { id: payload.sub, username: payload.username };
+      (req as any).user = { id: payload.sub, username: payload.username, role: payload.role };
       return next();
     } catch (err: any) {
       // debug log for token verification failure (safe to show during development)

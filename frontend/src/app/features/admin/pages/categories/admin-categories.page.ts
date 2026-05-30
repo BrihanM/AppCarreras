@@ -3,6 +3,8 @@
  */
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { APP_ROUTES } from '@core/constants/app.constants';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AdminService } from '../../services/admin.service';
 import { ToastService } from '@core/services/toast.service';
@@ -12,7 +14,7 @@ import { EmptyStateComponent } from '../../../../shared/components/ui/empty-stat
 @Component({
   selector: 'srx-admin-categories-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, EmptyStateComponent],
+  imports: [CommonModule, ReactiveFormsModule, EmptyStateComponent, RouterLink],
   templateUrl: './admin-categories.page.html',
   styleUrls: ['./admin-categories.page.scss'],
 })
@@ -38,6 +40,8 @@ export class AdminCategoriesPage implements OnInit {
   });
 
   readonly createModal = signal(false);
+
+  readonly routes = APP_ROUTES;
 
   ngOnInit(): void {
     this.adminService.getCategories().subscribe({

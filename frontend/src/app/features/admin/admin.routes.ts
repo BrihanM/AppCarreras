@@ -22,6 +22,16 @@ export const ADMIN_ROUTES: Routes = [
           import('./pages/categories/admin-categories.page').then((m) => m.AdminCategoriesPage),
       },
       {
+        path: 'vehicles',
+        loadComponent: () =>
+          import('./pages/vehicles/admin-vehicles.page').then((m) => m.AdminVehiclesPage),
+      },
+      {
+        path: 'challenges',
+        loadComponent: () =>
+          import('./pages/challenges/admin-challenges.page').then((m) => m.AdminChallengesPage),
+      },
+      {
         path: 'cache-rules',
         loadComponent: () => import('./pages/cache-rules/admin-cache-rules.page').then((m) => m.AdminCacheRulesPage),
       },
