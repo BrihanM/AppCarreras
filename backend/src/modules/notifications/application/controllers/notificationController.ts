@@ -14,8 +14,19 @@ const list = async (req: Request, res: Response) => {
   try {
     const userId = String(req.query.user_id || req.query.userId || '');
     if (!userId) return res.status(400).json({ error: 'user_id query param required' });
-    const items = await service.listForUser(userId);
-    res.json(items);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 100));
+    const itemsAll = await service.listForUser(userId);
+    const total = itemsAll.length;
+    const offset = (page - 1) * limit;
+    const items = itemsAll.slice(offset, offset + limit);
+    const pagination = {
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+    res.json({ success: true, message: 'Notifications listed', data: items, pagination });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -49,4 +60,20 @@ const markRead = async (req: Request, res: Response) => {
   }
 };
 
-export default { list, create, markRead };
+/**
+ * markAll
+ * Marca todas las notificaciones del usuario autenticado (o `user_id` query param).
+ */
+const markAll = async (req: Request, res: Response) => {
+  try {
+    // Prefer req.user (cookieAuth) but allow query param for scripts/tests
+    const userId = (req as any).user?.id || String(req.query.user_id || req.query.userId || '');
+    if (!userId) return res.status(400).json({ error: 'user_id required' });
+    await service.markAllForUser(userId);
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export default { list, create, markRead, markAll };

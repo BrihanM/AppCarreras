@@ -106,7 +106,9 @@ io.use((socket, next) => {
     const cookieHeader = socket.handshake.headers.cookie as string | undefined;
     const authHeader = socket.handshake.headers.authorization as string | undefined;
     const tokenFromAuth = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    let token: string | null = tokenFromAuth;
+    // Also accept token provided via Socket.IO client `auth` payload (handshake.auth.token)
+    const tokenFromHandshakeAuth = (socket.handshake as any).auth?.token as string | undefined;
+    let token: string | null = tokenFromAuth || tokenFromHandshakeAuth || null;
     if (!token && cookieHeader) {
       const parts = cookieHeader.split(';').map(p => p.trim());
       const t = parts.find(p => p.startsWith('token='));

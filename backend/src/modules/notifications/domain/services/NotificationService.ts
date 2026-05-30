@@ -36,7 +36,7 @@ class NotificationService {
     try {
       const io = getIo();
       if (io) {
-        io.to(`user:${created.user_id}`).emit('notification', created);
+        io.to(`user:${created.user_id}`).emit('notification:new', created);
       }
     } catch (e) {
       // ignore socket emission errors
@@ -62,6 +62,14 @@ class NotificationService {
    */
   async markAsRead(id: string): Promise<Notification> {
     return this.repo.markRead(id);
+  }
+
+  /**
+   * markAllForUser
+   * Marca todas las notificaciones de un usuario como leídas.
+   */
+  async markAllForUser(userId: string): Promise<void> {
+    return this.repo.markAll(userId);
   }
 
   /**

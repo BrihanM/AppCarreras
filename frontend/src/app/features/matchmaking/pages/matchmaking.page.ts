@@ -2,7 +2,7 @@
  * @fileoverview Página de Matchmaking.
  * Grid dinámico de pilotos disponibles con cards tipo social app.
  */
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 // RouterLink removed: not used in this template
@@ -25,6 +25,7 @@ import { forkJoin } from 'rxjs';
 })
 export class MatchmakingPage implements OnInit {
   readonly facade = inject(MatchmakingFacade);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly challengesService = inject(ChallengesService);
   private readonly toastService = inject(ToastService);
   private readonly vehiclesService = inject(VehiclesService);
@@ -136,7 +137,10 @@ export class MatchmakingPage implements OnInit {
         }
 
         // mark as challenged in next tick to avoid ExpressionChangedAfterItHasBeenCheckedError
-        setTimeout(() => this.challengedIds.add(String(pilot.id)), 0);
+        setTimeout(() => {
+          this.challengedIds.add(String(pilot.id));
+          try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
+        }, 0);
 
         // DEBUG: log vehicles and payload to troubleshoot invalid UUID errors
         // Remove these logs after verification
@@ -147,12 +151,14 @@ export class MatchmakingPage implements OnInit {
           next: () => {
             setTimeout(() => {
               this.activeOpponentIds.add(String(pilot.id));
+              try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
               this.toastService.success(`¡Reto enviado a ${pilot.username}!`);
             }, 0);
           },
           error: (err: any) => {
             setTimeout(() => {
               this.challengedIds.delete(String(pilot.id));
+              try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
               // Log server response for investigation (stringify to reveal array content)
               // eslint-disable-next-line no-console
               console.error('[matchmaking] createChallenge error:', JSON.stringify(err?.error ?? err));

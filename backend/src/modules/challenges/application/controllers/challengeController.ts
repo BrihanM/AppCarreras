@@ -113,10 +113,18 @@ const complete = async (req: Request, res: Response) => {
       winner_id: (req.body && (req.body.winner_id || req.body.winnerId)) || undefined,
       notes: req.body && req.body.notes,
     };
+    // DEBUG: log incoming complete requests
+    // eslint-disable-next-line no-console
+    console.log('[challenges.complete] id:', id, 'body:', JSON.stringify(body));
     const parsed = completeChallengeSchema.parse(body);
     const updated = await service.completeChallenge(id, parsed.winner_id);
     res.json(updated);
   } catch (err: any) {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: err.issues });
+    }
+    // eslint-disable-next-line no-console
+    console.error('[challenges.complete] error:', err);
     res.status(400).json({ error: err.message });
   }
 };

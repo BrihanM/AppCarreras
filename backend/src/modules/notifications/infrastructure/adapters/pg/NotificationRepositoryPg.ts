@@ -1,6 +1,7 @@
 import INotificationRepository from '../../../domain/ports/INotificationRepository';
 import { Notification } from '../../../domain/entities/Notification';
 import { pool } from '../../db';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Repositorio PostgreSQL para `Notification`.
@@ -11,8 +12,10 @@ class NotificationRepositoryPg implements INotificationRepository {
    * Inserta una notificación.
    */
   async create(n: Partial<Notification>): Promise<Notification> {
+    // Ensure an id is provided (DB migration does not set a default UUID)
+    const id = n.id || uuidv4();
     const q = `INSERT INTO notifications (id,user_id,type,message,is_read,reference_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`;
-    const values = [n.id, n.user_id, n.type, n.message, n.is_read || false, n.reference_id || null];
+    const values = [id, n.user_id, n.type, n.message, n.is_read || false, n.reference_id || null];
     const { rows } = await pool.query(q, values);
     return rows[0];
   }
@@ -50,6 +53,10 @@ class NotificationRepositoryPg implements INotificationRepository {
    */
   async delete(id: string): Promise<void> {
     await pool.query('DELETE FROM notifications WHERE id = $1', [id]);
+  }
+
+  async markAll(userId: string): Promise<void> {
+    await pool.query('UPDATE notifications SET is_read = true WHERE user_id = $1', [userId]);
   }
 }
 

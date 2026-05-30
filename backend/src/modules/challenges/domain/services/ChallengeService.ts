@@ -67,7 +67,12 @@ class ChallengeService {
 
     // Create notification for challenged user
     const notifRepo = new NotificationRepositoryPg();
-    await notifRepo.create({ user_id: toCreate.challenged_id!, type: 'challenge_sent', message: `You have been challenged by ${challenger.name}`, reference_id: created.id } as any);
+    try {
+      const createdNotif = await notifRepo.create({ user_id: toCreate.challenged_id!, type: 'challenge_sent', message: `You have been challenged by ${challenger.name}`, reference_id: created.id } as any);
+      try { const io = getIo(); if (io) io.to(`user:${toCreate.challenged_id}`).emit('notification:new', createdNotif); } catch (e) {}
+    } catch (e) {
+      console.error('[challenges] failed to create notification for challenged user', e);
+    }
     try {
       const io = getIo();
       if (io) io.to(`user:${toCreate.challenged_id}`).emit('challenge:created', created);
@@ -95,7 +100,12 @@ class ChallengeService {
     const userRepo = new UserRepositoryPg();
     const challenger = await userRepo.findById(updated.challenger_id);
     const notifRepo = new NotificationRepositoryPg();
-    await notifRepo.create({ user_id: updated.challenger_id, type: 'challenge_accepted', message: `Your challenge was accepted`, reference_id: updated.id } as any);
+    try {
+      const createdNotif2 = await notifRepo.create({ user_id: updated.challenger_id, type: 'challenge_accepted', message: `Your challenge was accepted`, reference_id: updated.id } as any);
+      try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('notification:new', createdNotif2); } catch (e) {}
+    } catch (e) {
+      console.error('[challenges] failed to create notification on accept', e);
+    }
     try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated); } catch (e) {}
     return updated;
   }
@@ -115,7 +125,12 @@ class ChallengeService {
     if (challenge.state !== 'pending') throw new Error('Only pending challenges can be rejected');
     const updated = await this.repo.update(id, { state: 'rejected' as ChallengeState });
     const notifRepo = new NotificationRepositoryPg();
-    await notifRepo.create({ user_id: updated.challenger_id, type: 'challenge_rejected', message: `Your challenge was rejected`, reference_id: updated.id } as any);
+    try {
+      const createdNotif3 = await notifRepo.create({ user_id: updated.challenger_id, type: 'challenge_rejected', message: `Your challenge was rejected`, reference_id: updated.id } as any);
+      try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('notification:new', createdNotif3); } catch (e) {}
+    } catch (e) {
+      console.error('[challenges] failed to create notification on reject', e);
+    }
     try { const io = getIo(); if (io) io.to(`user:${updated.challenger_id}`).emit('challenge:updated', updated); } catch (e) {}
     return updated;
   }
@@ -168,8 +183,12 @@ class ChallengeService {
           await userRepo.update(updatedWinner.id, { rank: newRank, consecutive_challenges: 0 } as any);
           // notify rank change
           const notifRepo = new NotificationRepositoryPg();
-          await notifRepo.create({ user_id: updatedWinner.id, type: 'rank_updated', message: `Congratulations! You have been promoted to rank ${newRank}`, reference_id: updated.id } as any);
-          try { const io = getIo(); if (io) io.to(`user:${updatedWinner.id}`).emit('rank:updated', { userId: updatedWinner.id, rank: newRank }); } catch (e) {}
+          try {
+            const rankNotif = await notifRepo.create({ user_id: updatedWinner.id, type: 'rank_updated', message: `Congratulations! You have been promoted to rank ${newRank}`, reference_id: updated.id } as any);
+            try { const io = getIo(); if (io) io.to(`user:${updatedWinner.id}`).emit('rank:updated', { userId: updatedWinner.id, rank: newRank }); if (io) io.to(`user:${updatedWinner.id}`).emit('notification:new', rankNotif); } catch (e) {}
+          } catch (e) {
+            console.error('[challenges] failed to create rank notification', e);
+          }
         }
       }
     } catch (e) {
@@ -179,8 +198,13 @@ class ChallengeService {
 
     // Notifications
     const notifRepo = new NotificationRepositoryPg();
-    await notifRepo.create({ user_id: winner_id, type: 'challenge_completed', message: `You won the challenge`, reference_id: updated.id } as any);
-    await notifRepo.create({ user_id: loserId, type: 'challenge_completed', message: `You lost the challenge`, reference_id: updated.id } as any);
+    try {
+      const winNotif = await notifRepo.create({ user_id: winner_id, type: 'challenge_completed', message: `You won the challenge`, reference_id: updated.id } as any);
+      const loseNotif = await notifRepo.create({ user_id: loserId, type: 'challenge_completed', message: `You lost the challenge`, reference_id: updated.id } as any);
+      try { const io = getIo(); if (io) { io.to(`user:${winner_id}`).emit('notification:new', winNotif); io.to(`user:${loserId}`).emit('notification:new', loseNotif); } } catch (e) {}
+    } catch (e) {
+      console.error('[challenges] failed to create completion notifications', e);
+    }
     try { const io = getIo(); if (io) {
       io.to(`user:${winner_id}`).emit('challenge:completed', updated);
       io.to(`user:${loserId}`).emit('challenge:completed', updated);

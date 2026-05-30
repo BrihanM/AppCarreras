@@ -61,8 +61,9 @@ export class ChallengesFacade {
    */
   acceptChallenge(id: string): void {
     this.challengesService.acceptChallenge(id).subscribe({
-      next: ({ data }) => {
-        this.updateChallenge(data);
+      next: (res) => {
+        const updated = (res as any)?.data ?? (res as any);
+        this.updateChallenge(updated);
         this.toastService.success('¡Reto aceptado! ¡Que gane el mejor!');
       },
       error: () => this.toastService.error('Error al aceptar el reto.'),
@@ -75,8 +76,9 @@ export class ChallengesFacade {
    */
   rejectChallenge(id: string): void {
     this.challengesService.rejectChallenge(id).subscribe({
-      next: ({ data }) => {
-        this.updateChallenge(data);
+      next: (res) => {
+        const updated = (res as any)?.data ?? (res as any);
+        this.updateChallenge(updated);
         this.toastService.info('Reto rechazado.');
       },
       error: () => this.toastService.error('Error al rechazar el reto.'),
@@ -90,8 +92,9 @@ export class ChallengesFacade {
    */
   completeChallenge(id: string, winnerId: string): void {
     this.challengesService.completeChallenge(id, { winnerId }).subscribe({
-      next: ({ data }) => {
-        this.updateChallenge(data);
+      next: (res) => {
+        const updated = (res as any)?.data ?? (res as any);
+        this.updateChallenge(updated);
         this.toastService.success('¡Carrera completada! Ranking actualizado.');
       },
       error: () => this.toastService.error('Error al completar el reto.'),
@@ -99,6 +102,7 @@ export class ChallengesFacade {
   }
 
   private updateChallenge(updated: Challenge): void {
+    if (!updated || !updated.id) return;
     this.challenges.update((list) =>
       list.map((c) => (c.id === updated.id ? updated : c))
     );
